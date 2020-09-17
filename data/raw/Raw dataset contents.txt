@@ -1,0 +1,41 @@
+AE  Adverse events
+BB  Biological Sampling
+BIO Microbiology
+CA  Cardiovascular Support
+CC  Comorbid Conditions
+CM  Concomitant Medication
+CO  Comments
+CS  Clinical Status and Outcomes
+DA  Drug Accountability Hydroxychloroquine
+DI  Diagnostic Imaging
+DM  Demographics
+DPH Discharge from Hospital
+DR  Drug Accountability Remdesivir
+EF  Epidemiological Factors
+EOS End of Study
+FS  Frailty Scale
+FT  Fluid transfusion
+ICU ICU Information
+IE  Inclusion/Exclusion evaluation
+LBB Laboratory Test - Biochemistry
+LBH Laboratory Test - Hematology
+ME  Medication on Admission
+OA  Onset and Admission - Onset of first symtom, admission, diagnosis
+PDV Protocol Deviation
+PRE Pregnancy test
+RAN Randomisation (HCQ and SOC available)
+RAN123 Randomisation (HCQ, Remdesivir and SOC available)
+RAN13 Randomisation (Remdesivir and SOC available)
+RC  Respiratory Condition and Support
+RE  Readmission to Hospital
+SC  SOFA Score
+SIG Signs and Symptoms
+SQ  Daily Assessment
+VS  Vital Signs
+WHO Randomisation WHO database
+
+
+
+
+
+
