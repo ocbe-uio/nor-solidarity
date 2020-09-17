@@ -1,0 +1,6 @@
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
+
+#This folder should contain the AD datasets compiled from TD datasets. These are not uploaded to GitHub
