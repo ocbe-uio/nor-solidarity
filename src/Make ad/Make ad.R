@@ -18,7 +18,7 @@ adsl <- tddm %>%
          age_calc = round(age_calc, 1)) %>% 
   filter(!is.na(randt))
 
-write_rds(adsl, "5.3 Analyser/Datasets/ad/adsl.rds")
+write_rds(adsl, "data/ad/adsl.rds")
 
 ##################
 #Make adae
@@ -39,7 +39,7 @@ adae <- adsl %>%
          anysae = max(sae)) %>% 
   ungroup
 
-write_rds(adae, "5.3 Analyser/Datasets/ad/adae.rds")
+write_rds(adae, "data/ad/adae.rds")
 
 ##################
 # Make adeff
@@ -189,7 +189,7 @@ adeff <- adsl %>%
 #   filter(subjectid != "03-003")
 #   
 # 
-# write_dta(adwho, path = "5.3 Analyser/Datasets/ad/adwho.dta", version = 14)
+# write_dta(adwho, path = "data/ad/adwho.dta", version = 14)
 #      
 # 
 #     
