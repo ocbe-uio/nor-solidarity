@@ -40,7 +40,7 @@ tdran <- bind_rows(pick(raw,"ran"), pick(raw,"ran123"), pick(raw,"ran13"), pick(
   select(subjectid, rantrt, randt, ranavail)
 
 
-write_rds(tdran, "5.3 Analyser/Datasets/td/tdran.rds")
+write_rds(tdran, "data/td/tdran.rds")
 
 
 ###################################################
@@ -56,7 +56,7 @@ tdae <- raw %>% pick("ae") %>%
   select(-(eventid:designversion)) %>% 
   labeliser()
 
-write_rds(tdae, "5.3 Analyser/Datasets/td/tdae.rds")
+write_rds(tdae, "data/td/tdae.rds")
 
 
 #########################################
@@ -69,7 +69,7 @@ tdex <- raw %>% pick("da") %>%
   select(-(eventid:designversion), -siteseq, -subjectseq, -eventseq, -ends_with("cd")) %>% 
   labeliser() 
   
-write_rds(tdex, "5.3 Analyser/Datasets/td/tdex.rds")
+write_rds(tdex, "data/td/tdex.rds")
 
 
 

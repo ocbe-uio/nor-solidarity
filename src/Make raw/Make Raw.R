@@ -14,10 +14,10 @@ library(stringr)
 library(rlang)
 library(glue)
 
-export_name <- "ous_20200909_055842"
-export_folder <- glue("5.3 Analyser/Datasets/raw/txt/{export_name}")
+export_name <- "ous_20200917_204440"
+export_folder <- glue("data/raw/{export_name}")
                       
-source("5.3 Analyser/Programs/External/functions.R")
+source("src/External/functions.R")
 
 
 cl <- read_csv(glue("{export_folder}/{export_name}_CodeLists.csv"), skip = 1) %>%
@@ -53,4 +53,4 @@ raw <- tibble(files = list.files(export_folder)) %>%
   mutate(data = map(txt, factoriser, codelist = items)) %>%
   mutate(data = map(data, ~ mutate_if(., haven::is.labelled, as.numeric)))
 
-write_rds(raw, "5.3 Analyser/Datasets/raw/raw.rds")
+write_rds(raw, "data/raw/raw.rds")
