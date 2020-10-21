@@ -14,7 +14,7 @@ library(stringr)
 library(rlang)
 library(glue)
 
-export_name <- "ous_20200917_204440"
+export_name <- "ous_20201016_084109"
 export_folder <- glue("data/raw/{export_name}")
                       
 source("src/External/functions.R")

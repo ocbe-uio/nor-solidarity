@@ -46,7 +46,7 @@ write_rds(adae, "data/ad/adae.rds")
 ##################
 
 adeff <- adsl %>% 
-  select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt, sex) %>%
+  select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt, sex, sq_admis) %>%
   left_join(pick(raw, "dph"), by = c("sitename", "sitecode", "subjectid") ) %>% 
   select(-(siteseq:designversion)) %>% 
   left_join(pick(raw, "eos"), by = c("sitename", "sitecode", "subjectid")) %>% 
