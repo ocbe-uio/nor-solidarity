@@ -13,6 +13,17 @@ tddm <- raw %>%
   select(-ends_with("cd"), -dmwhoyn) %>% 
   labeliser(codelist = items) 
 
+tdsq <- raw %>% 
+  pick("sq") %>% 
+  select(sitename, sitecode, subjectid, eventdate, eventid, sq_admis) %>%
+  filter(eventid == "V00") %>% 
+  select(subjectid, sq_admis) %>% 
+  labeliser(codelist = items)
+
+tddm <- tddm %>% 
+  left_join(tdsq, by = "subjectid")
+
+
 
 ###############
 # Make tdran
