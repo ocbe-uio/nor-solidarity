@@ -21,11 +21,11 @@ factoriser <- function(data, codelist = items, delabel = TRUE) {
     
     data <- data %>%
       mutate_at(name2, as.numeric) %>%
-      mutate_at(name2, labelled, labels = labs) %>%
+      mutate_at(name2, haven::labelled, labels = labs) %>%
       mutate(!!name1 := as_factor(!!sym(name2), ordered = TRUE)) 
   }
   
-  if (delabel == TRUE) mutate_if(data, is.labelled, as.numeric)
+  if (delabel == TRUE) mutate_if(data, haven::is.labelled, as.numeric)
   
   return(data)
 }
@@ -39,7 +39,7 @@ labeliser <- function(data, codelist = items){
     spread(id, label) %>%
     as.list()
   
-  var_label(data) <- labels
+  labelled::var_label(data) <- labels
   
   return(data)
 }
@@ -48,23 +48,3 @@ pick <- function(db, name) {
   db %>% filter(id == name) %>% pluck("data",1)
 }
 
-# 
-# factoriser <- function(data, codelist) {
-#   x <- names(data)
-#   y <- codelist %>%
-#     filter(ID %in% x) %>%
-#     filter(categorical == 1) %>%
-#     select(ID,value_labels)
-#   
-#   for (i in 1:length(y$ID)){
-#     ct <- y %>%
-#       slice(i) %>%
-#       unnest() %>%
-#       pull(CodeText)
-#     col <- y$ID[[i]]
-#     data <- data %>%
-#       mutate_at(col, factor, levels = ct)
-#   }
-#   
-#   return(data)
-# }

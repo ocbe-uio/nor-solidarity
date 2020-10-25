@@ -23,7 +23,7 @@ tdsq <- raw %>%
 tddm <- tddm %>% 
   left_join(tdsq, by = "subjectid")
 
-
+write_rds(tdran, "data/td/tddm.rds")
 
 ###############
 # Make tdran
