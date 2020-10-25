@@ -1,31 +1,23 @@
-library(haven)
-library(readxl)
+
 library(tidyverse)
-library(lme4)
-library(emmeans)
-library(margins)
-library(broom)
-library(labelled)
-library(arsenal)
-library(kableExtra)
-#library(knitr)
-library(ggformula)
-library(stringr)
-library(rlang)
 library(glue)
 
-export_name <- "ous_20201016_084109"
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args)==0) {
+  export_name <- "ous_20201016_084"
+} else if (length(args) != 0) {
+  export_name <- args[1]
+}
+
+
 export_folder <- glue("data/raw/{export_name}")
                       
-source("src/External/functions.R")
+source("src/external/functions.R")
 
 
 cl <- read_csv(glue("{export_folder}/{export_name}_CodeLists.csv"), skip = 1) %>%
   rename_all(tolower) %>%
   group_by(formatname) %>%
-  #mutate(codetext = if_else(is.na(codetext), "Not Done", codetext)) %>%
-  #mutate(codetext = if_else(formatname == "UNKFMT", "Unknown", codetext)) %>%
-  #mutate(codetext = if_else(formatname == "AEFMT", "Confirmed", codetext)) %>%
   nest(value_labels = c(datatype, codevalue, codetext))
 items <- read_csv(glue("{export_folder}/{export_name}_Items.csv"), skip = 1) %>%
   rename_all(tolower) %>%
