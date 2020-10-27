@@ -2,10 +2,14 @@ library(tidyverse)
 library(lubridate)
 library(glue)
 
+source("src/external/functions.R")
+
 # 
 # Make tddm
 # 
 
+raw <- readr::read_rds("data/raw/raw.rds")
+items <- raw %>% pick("items")
 
 tddm <- raw %>% 
   pick("dm") %>% 
@@ -23,7 +27,7 @@ tdsq <- raw %>%
 tddm <- tddm %>% 
   left_join(tdsq, by = "subjectid")
 
-write_rds(tdran, "data/td/tddm.rds")
+write_rds(tddm, "data/td/tddm.rds")
 
 ###############
 # Make tdran
