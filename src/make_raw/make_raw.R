@@ -4,7 +4,7 @@ library(glue)
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args)==0) {
-  export_name <- "ous_20201016_084"
+  export_name <- "ous_20201016_084109" #default export
 } else if (length(args) != 0) {
   export_name <- args[1]
 }
@@ -43,6 +43,8 @@ raw <- tibble(files = list.files(export_folder)) %>%
   mutate(txt = map(txt, rename_all, tolower)) %>%
   mutate(txt = map(txt, labeliser, codelist = items)) %>%
   mutate(data = map(txt, factoriser, codelist = items)) %>%
-  mutate(data = map(data, ~ mutate_if(., haven::is.labelled, as.numeric)))
+  mutate(data = map(data, ~ mutate_if(., haven::is.labelled, as.numeric))) %>% 
+  add_row(files= glue("{export_name}_CodeLists.csv"), id = "codelist", txt = list(cl), data = list(cl)) %>% 
+  add_row(files= glue("{export_name}_Items.csv"), id = "items", txt = list(items), data = list(items))
 
 write_rds(raw, "data/raw/raw.rds")
