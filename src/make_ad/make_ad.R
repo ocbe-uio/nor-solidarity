@@ -1,21 +1,26 @@
 library(tidyverse)
 library(lubridate)
 library(glue)
+library(readr)
+
+source("src/external/functions.R")
 
 
 ################
 # Make adsl
 ################
 
+tddm <- read_rds("data/td/tddm.rds")
+tdran <- read_rds("data/td/tdran.rds")
+raw <- read_rds("data/raw/raw.rds")
+items <- raw %>% pick("items")
+
 
 adsl <- tddm %>% 
   select(-eventdate) %>% 
   left_join(tdran, by= "subjectid") %>% 
   labeliser(codelist = items) %>% 
-  set_variable_labels(ranavail = "Available treatments") %>% 
-  mutate(age_calc = interval(brthdat, dmicdat) %/% months(1), 
-         age_calc = age_calc / 12,
-         age_calc = round(age_calc, 1)) %>% 
+  labelled::set_variable_labels(ranavail = "Available treatments") %>% 
   filter(!is.na(randt))
 
 write_rds(adsl, "data/ad/adsl.rds")
@@ -23,6 +28,8 @@ write_rds(adsl, "data/ad/adsl.rds")
 ##################
 #Make adae
 #################
+
+tdae <- read_rds("data/td/tdae.rds")
 
 adae <- adsl %>% 
   select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt) %>%
@@ -39,11 +46,14 @@ adae <- adsl %>%
          anysae = max(sae)) %>% 
   ungroup
 
-write_rds(adae, "data/ad/adae.rds")
+readr::write_rds(adae, "data/ad/adae.rds")
 
 ##################
 # Make adeff
 ##################
+
+
+raw <- read_rds("data/raw/raw.rds")
 
 adeff <- adsl %>% 
   select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt, sex, sq_admis) %>%
@@ -69,6 +79,10 @@ adeff <- adsl %>%
   arrange(subjectid, outcomedat) %>% 
   filter(row_number() == 1) %>% 
   ungroup
+
+write_rds(adeff, "data/ad/adeff.rds")
+
+
 
 # lungimaging <- adsl %>%
 #   left_join(pick(raw, "di") %>% select(subjectid, dixraydt, diinfil), by = "subjectid") %>%
