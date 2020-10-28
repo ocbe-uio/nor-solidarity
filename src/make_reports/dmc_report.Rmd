@@ -2,13 +2,7 @@
 title: "NOR-SOLIDARITY DMC report"
 author: "Inge Christoffer Olsen, PhD"
 date: '`r format(Sys.time(), "%d %B, %Y")` '
-output:
-  pdf_document:
-    includes:
-      in_header: "preamble.tex"
-  word_document:
-  html_document:
-classoption: landscape
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -21,16 +15,20 @@ library(wesanderson)
 library(purrr)
 library(rlang)
 library(glue)
-library(kableExtra)
+#library(kableExtra)
 library(knitr)
 
 ```
 
-```{r load-datasets, cache = TRUE, include = FALSE}
+```{r load-datasets, include = FALSE}
 
-sys.source("src/Make raw/Make Raw.R", envir = knitr::knit_global())
-sys.source("src/Make td/Make td.R", envir = knitr::knit_global())
-sys.source("src/Make ad/Make ad.R", envir = knitr::knit_global())
+tddm <- read_rds("data/td/tddm.rds")
+tdran <- read_rds("data/td/tdran.rds")
+raw <- read_rds("data/raw/raw.rds")
+adsl <- read_rds("data/ad/adsl.rds")
+adeff <- read_rds("data/ad/adeff.rds")
+adae <- read_rds("data/ad/adae.rds")
+tdex <- read_rds("data/td/tdex.rds")
 ```
 
 
@@ -161,7 +159,7 @@ header <- adsl %>%
 
 
 
-```{r demographics, warning = FALSE, message = FALSE}
+```{r demographics, warning = FALSE, message = FALSE, results = 'asis', echo = FALSE}
 
 dm_table <- tribble(
   ~text, ~f, ~var, ~param,
@@ -169,57 +167,59 @@ dm_table <- tribble(
   "Female, n (%)", "n_pct", "sex", list(level = "Female")
 )
 
-dm_table %>% 
+
+
+dm_table %>%
   mutate(data = list(adsl),
-         group = "rantrt") %>% 
-  mutate(res = pmap(list(f, data, var, group, param), stats_exec)) %>% 
-  mutate(id = map(res,names)) %>% 
-  unnest(c(res, id)) %>% 
-  pivot_wider(values_from = res, names_from = id) %>% 
-  select(text, all_of(levels(adsl$rantrt))) %>% 
-  knitr::kable(col.names = c("Parameter", header), 
+         group = "rantrt") %>%
+  mutate(res = pmap(list(f, data, var, group, param), stats_exec)) %>%
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, all_of(levels(adsl$rantrt))) %>%
+  knitr::kable(col.names = c("Parameter", header),
                caption = "Demographics")
 
 ```
 
 # Exposure
 
-```{r exposure}
+```{r exposure, results = "asis", echo = FALSE}
 
-adsl %>% 
+adsl %>%
   select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt) %>%
-  left_join(tdex, by = c("sitename", "sitecode", "subjectid")) %>% 
-  group_by(subjectid, rantrt) %>% 
-  summarise(totdose_hcq = sum(dabcno), 
-            n_dose_hcq = sum(dabcno > 0), 
-            n_desc_hcq = sum(dadiyn_c =="Yes"), 
-            totdose_rem = sum(drremds), 
+  left_join(tdex, by = c("sitename", "sitecode", "subjectid")) %>%
+  group_by(subjectid, rantrt) %>%
+  summarise(totdose_hcq = sum(dabcno),
+            n_dose_hcq = sum(dabcno > 0),
+            n_desc_hcq = sum(dadiyn_c =="Yes"),
+            totdose_rem = sum(drremds),
             n_dose_rem = sum(drremds >0),
-            n_desc_rem = sum(dardisc == "Yes"), 
-            .groups = "drop_last") %>% 
-  filter(rantrt != "Standard of care (SOC)") %>% 
+            n_desc_rem = sum(dardisc == "Yes"),
+            .groups = "drop_last") %>%
+  filter(rantrt != "Standard of care (SOC)") %>%
   mutate(totdose = if_else(rantrt == "Hydroxychloroquine + SOC", totdose_hcq, totdose_rem),
          n_dose = if_else(rantrt == "Hydroxychloroquine + SOC", n_dose_hcq, n_dose_rem),
-         n_desc = if_else(rantrt == "Hydroxychloroquine + SOC", n_desc_hcq, n_desc_rem), 
-         any_desc = n_desc > 0) %>% 
-  group_by(rantrt) %>% 
+         n_desc = if_else(rantrt == "Hydroxychloroquine + SOC", n_desc_hcq, n_desc_rem),
+         any_desc = n_desc > 0) %>%
+  group_by(rantrt) %>%
   summarise(median_totdose = quantile(totdose, 0.5, na.rm = TRUE),
             q1_totdose = quantile(totdose, 0.25, na.rm = TRUE),
             q3_totdose = quantile(totdose, 0.75, na.rm = TRUE),
-            median_no_doses = median(n_dose,0.5,  na.rm = TRUE), 
+            median_no_doses = median(n_dose,0.5,  na.rm = TRUE),
             q1_no_doses = quantile(n_dose, 0.25, na.rm = TRUE),
             q3_no_doses = quantile(n_dose, 0.75, na.rm = TRUE),
             n_anydesc = sum(any_desc, na.rm = TRUE),
-            n = n(), 
-            .groups = "drop_last") %>% 
-  mutate(`Total dose, median (IQR), mg` = glue("{median_totdose} ({q1_totdose} - {q3_totdose})"), 
-         `Days with treatment, median (IQR)` = glue("{median_no_doses} ({q1_no_doses} - {q3_no_doses})"), 
-         `Patients with any treatment discrepencies, n (%)` = glue("{n_anydesc} ({round(100*n_anydesc/n, digits = 1)}%)")) %>% 
-  select(-(median_totdose:n)) %>% 
-  pivot_longer(-rantrt) %>% 
-  pivot_wider(names_from = rantrt, values_from = value) %>% 
-  rename(Parameter = name) %>% 
-  knitr::kable(booktabs = TRUE, 
+            n = n(),
+            .groups = "drop_last") %>%
+  mutate(`Total dose, median (IQR), mg` = glue("{median_totdose} ({q1_totdose} - {q3_totdose})"),
+         `Days with treatment, median (IQR)` = glue("{median_no_doses} ({q1_no_doses} - {q3_no_doses})"),
+         `Patients with any treatment discrepencies, n (%)` = glue("{n_anydesc} ({round(100*n_anydesc/n, digits = 1)}%)")) %>%
+  select(-(median_totdose:n)) %>%
+  pivot_longer(-rantrt) %>%
+  pivot_wider(names_from = rantrt, values_from = value) %>%
+  rename(Parameter = name) %>%
+  knitr::kable(booktabs = TRUE,
                caption = "Exposure to study treatment")
 
 
@@ -235,21 +235,21 @@ ae_n_pct <-  function(data, var, group, level = 1) {
   var <- ensym(var)
   group <- ensym(group)
 
-  data %>% 
-    group_by(subjectid, !!group, !!var) %>% 
-    summarise(n = sum(!!var), 
-              .groups = "drop_last") %>% 
-    group_by(!!group, !!var) %>% 
+  data %>%
+    group_by(subjectid, !!group, !!var) %>%
+    summarise(n = sum(!!var),
+              .groups = "drop_last") %>%
+    group_by(!!group, !!var) %>%
     summarise(n_ae = sum(n),
-            n_pat = n(), 
-            .groups = "drop_last") %>% 
-    group_by(!!group) %>% 
+            n_pat = n(),
+            .groups = "drop_last") %>%
+    group_by(!!group) %>%
     mutate(N_pat = sum(n_pat),
            pct = round(n_pat/N_pat*100,digits = 1),
            txt = paste0(n_pat, " (", pct, "%)")) %>%
-    filter(!!var %in% !!level) %>% 
-    ungroup %>% 
-    select(!!group, txt) %>% 
+    filter(!!var %in% !!level) %>%
+    ungroup %>%
+    select(!!group, txt) %>%
     deframe
 }
 
@@ -257,23 +257,23 @@ ae_N_n_pct <-  function(data, var, group, level = 1) {
   var <- ensym(var)
   group <- ensym(group)
 
-  data %>% 
-    group_by(subjectid, !!group) %>% 
-    summarise(n = sum(!!var), 
-              .groups = "drop_last") %>% 
-    mutate(!!var := if_else(n==0, 0, 1)) %>% 
-    group_by(!!group, !!var) %>% 
+  data %>%
+    group_by(subjectid, !!group) %>%
+    summarise(n = sum(!!var),
+              .groups = "drop_last") %>%
+    mutate(!!var := if_else(n==0, 0, 1)) %>%
+    group_by(!!group, !!var) %>%
     summarise(n_ae = sum(n),
-            n_pat = n(), 
-            .groups = "drop_last") %>% 
-    group_by(!!group) %>% 
+            n_pat = n(),
+            .groups = "drop_last") %>%
+    group_by(!!group) %>%
     mutate(N_pat = sum(n_pat),
            pct = round(n_pat/N_pat*100,digits = 1),
            txt = paste0("[", n_ae,"] ", n_pat, " (", pct, "%)")) %>%
-    mutate(txt = if_else(n_ae == 0, "[0] 0 (0%)", txt)) %>% 
-    filter(!!var %in% !!level) %>% 
-    ungroup %>% 
-    select(!!group, txt) %>% 
+    mutate(txt = if_else(n_ae == 0, "[0] 0 (0%)", txt)) %>%
+    filter(!!var %in% !!level) %>%
+    ungroup %>%
+    select(!!group, txt) %>%
     deframe
 }
 
@@ -281,9 +281,9 @@ stats_exec <- function(f, data, var, group, ...){
     rlang::exec(f, data, var, group, !!!(...))
 }
 ```
- 
+
 ## AE Summary
- 
+
 ```{r ae-summary}
 
 ae_summary_table <- tribble(
@@ -328,12 +328,12 @@ ae_table_fns <- function(data, filtervar){
     mutate(N_pat = n_distinct(subjectid)) %>%
     filter(!!filtervar == 1)  %>%
     group_by(subjectid, rantrt, N_pat, soc_name, pt_name) %>%
-    summarise(n_ae = n(), 
+    summarise(n_ae = n(),
               .groups = "drop_last") %>%
     filter(!is.na(pt_name)) %>%
     group_by(rantrt, N_pat, soc_name, pt_name) %>%
     summarise(n_pat = n(),
-              n_ae = sum(n_ae), 
+              n_ae = sum(n_ae),
               .groups = "drop_last") %>%
     mutate(pct = round(n_pat/N_pat*100,digits = 1),
            txt = paste0("[", n_ae,"] ", n_pat, " (", pct, "%)"),
@@ -342,7 +342,7 @@ ae_table_fns <- function(data, filtervar){
     pivot_wider(values_from = txt, names_from = arm, values_fill = list(txt = "")) %>%
     #mutate_at(vars(starts_with("arm")), ~if_else(is.na(.), "", .)) %>%
     arrange(soc_name, pt_name) %>%  group_by(soc2 = soc_name) %>%
-    mutate(soc_name = if_else(row_number() != 1, "", soc_name)) %>% ungroup() %>% select(-soc2) %>% 
+    mutate(soc_name = if_else(row_number() != 1, "", soc_name)) %>% ungroup() %>% select(-soc2) %>%
     filter(soc_name != "NA")
 }
 
@@ -352,8 +352,8 @@ adae %>%
   mutate(all = 1) %>%
   ae_table_fns("all") %>%
   knitr::kable(col.names = c("System Organ Class", "Preferred Term", header),
-               caption = " Adverse Events by System Organ Class and Preferred term", longtable = TRUE, booktabs = TRUE) %>% 
-  column_spec(1:2, width = "5cm")
+               caption = " Adverse Events by System Organ Class and Preferred term", longtable = TRUE, booktabs = TRUE) #%>%
+  #column_spec(1:2, width = "5cm")
 ```
 
 ## Serious Adverse Events
@@ -367,8 +367,8 @@ adae %>%
   knitr::kable( col.names = c("System Organ Class", "Preferred Term", header),
                caption = "Serious Adverse Events by System Organ Class and Preferred term",
          booktabs = TRUE,
-         longtable = TRUE) %>%
-  column_spec(1:2, width = "5cm")
+         longtable = TRUE) #%>%
+  #column_spec(1:2, width = "5cm")
 
 ```
 
@@ -379,10 +379,10 @@ adae %>%
 adae %>%
   bind_rows(adae, .id="added") %>%
   mutate(pt_name = if_else(added == 2, "#Total", pt_name)) %>%
-  mutate(susar = (aesercd == 1) & (saerelcd == 2) & saeexpcd ==2) %>% 
+  mutate(susar = (aesercd == 1) & (saerelcd == 2) & saeexpcd ==2) %>%
   ae_table_fns("susar") %>%
-  rename( "System Organ Class" = soc_name,  "Preferred Term" = pt_name) %>% 
-  knitr::kable( 
+  rename( "System Organ Class" = soc_name,  "Preferred Term" = pt_name) %>%
+  knitr::kable(
                caption = "Suspected Unexpected Serious Adverse Reaction by System Organ Class and Preferred term",
          booktabs = TRUE,
          longtable = TRUE)
@@ -392,18 +392,18 @@ adae %>%
 # Mortality and other outcomes by admission state
 
 ```{r}
-adeff %>% 
-  group_by(sq_admis, outcome) %>% 
-  summarise(n = n(), .groups = "drop_last") %>% 
-  group_by(sq_admis) %>% 
+adeff %>%
+  group_by(sq_admis, outcome) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  group_by(sq_admis) %>%
   mutate(tot = sum(n),
-           pct = round(n/tot*100,digits = 1)) %>% 
-  mutate(txt = paste0(n, " (", pct, "%)")) %>% 
-  ungroup %>% 
-  select(-(n:pct)) %>% 
-  pivot_wider(values_from = txt, names_from = sq_admis) %>% 
+           pct = round(n/tot*100,digits = 1)) %>%
+  mutate(txt = paste0(n, " (", pct, "%)")) %>%
+  ungroup %>%
+  select(-(n:pct)) %>%
+  pivot_wider(values_from = txt, names_from = sq_admis) %>%
   knitr::kable( booktabs = TRUE, caption = "Outcome")
-  
+
 ```
 
 
@@ -411,21 +411,21 @@ adeff %>%
 
 <!-- # Outcome -->
 
-<!-- The following report is based on pseudo-randomised groups, not true allocations. The true allocations are available for the DMC only.  -->
+<!-- The following report is based on pseudo-randomised groups, not true allocations. The true allocations are available for the DMC only. -->
 
 <!-- ```{r outcome} -->
 
-<!-- adeff %>%  -->
+<!-- adeff %>% -->
 <!--   mutate(rantrt = sample(rantrt, n(), replace = FALSE)) %>% #Delete this row for true allocations -->
-<!--   group_by(rantrt, outcome) %>%  -->
-<!--   summarise(n = n(), .groups = "drop_last") %>%  -->
-<!--   group_by(rantrt) %>%  -->
+<!--   group_by(rantrt, outcome) %>% -->
+<!--   summarise(n = n(), .groups = "drop_last") %>% -->
+<!--   group_by(rantrt) %>% -->
 <!--   mutate(tot = sum(n), -->
-<!--            pct = round(n/tot*100,digits = 1)) %>%  -->
-<!--   mutate(txt = paste0(n, " (", pct, "%)")) %>%  -->
-<!--   ungroup %>%  -->
-<!--   select(-(n:pct)) %>%  -->
-<!--   pivot_wider(values_from = txt, names_from = rantrt) %>%  -->
+<!--            pct = round(n/tot*100,digits = 1)) %>% -->
+<!--   mutate(txt = paste0(n, " (", pct, "%)")) %>% -->
+<!--   ungroup %>% -->
+<!--   select(-(n:pct)) %>% -->
+<!--   pivot_wider(values_from = txt, names_from = rantrt) %>% -->
 <!--   knitr::kable(col.names = c("Parameter", header), booktabs = TRUE, caption = "Outcome") -->
 
 
