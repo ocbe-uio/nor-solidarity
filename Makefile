@@ -25,8 +25,11 @@ $(AD): $(TD) data/raw/raw.rds src/external/functions.R src/make_ad/make_ad.R
 	Rscript src/make_ad/make_ad.R
 	
 results/dmc/$(DMC_REPORT): $(AD) src/make_reports/dmc_report.Rmd
-	echo $(DMC_REPORT) 
-	Rscript -e 'rmarkdown::render("src/make_reports/dmc_report.Rmd", output_dir = "results/dmc", output_file = "$(DMC_REPORT)", knit_root_dir = "../../.")'
+	Rscript -e 'rmarkdown::render("src/make_reports/dmc_report.Rmd", \
+	output_dir = "results/dmc", output_file = "$(DMC_REPORT)", \
+	knit_root_dir = "../../.", \
+	params = list(viedoc_export = "$(VIEDOC_EXPORT_NAME)") \
+	)'
 	
 	
 	

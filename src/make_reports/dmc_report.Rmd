@@ -3,6 +3,8 @@ title: "NOR-SOLIDARITY DMC report"
 author: "Inge Christoffer Olsen, PhD"
 date: '`r format(Sys.time(), "%d %B, %Y")` '
 output: word_document
+params:
+  viedoc_export: NA
 ---
 
 ```{r setup, include=FALSE}
@@ -33,7 +35,7 @@ tdex <- read_rds("data/td/tdex.rds")
 
 
 # Introduction
-This is the report for the first Data Monitoring Committee meeting in the NOR-SOLIDARITY trial. The data are based on an export from the Viedoc electronic data capture system time stamped 28 April 2020 13:49 UTC. There were `r n_distinct(adsl)` included patients.
+This is the report for the Data Monitoring Committee meeting in the NOR-SOLIDARITY trial.  The data are based on an export from the Viedoc electronic data capture system time stamped "`r params$viedoc_export`". There were `r n_distinct(adsl)` included patients.
 
 # Inclusion status
 
