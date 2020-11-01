@@ -59,6 +59,9 @@ tdme <- raw %>%
   select(-ends_with("cd"))
 
 
+
+
+
 ###############
 # Make tdran
 ##############
@@ -82,7 +85,8 @@ tdran <- bind_rows(pick(raw,"ran"), pick(raw,"ran123"), pick(raw,"ran13"), pick(
     !is.na(ran123dt) ~ list(c("Standard of care (SOC)", "Hydroxychloroquine + SOC", "Remdesivir + SOC")),
     !is.na(ran13dt) ~ list(c("Standard of care (SOC)", "Remdesivir + SOC"))
   )) %>% 
-  select(subjectid, rantrt, randt, ranavail)
+  select(subjectid, rantrt, randt, ranavail) %>% 
+  labelled::set_variable_labels(ranavail = "Available treatments")
 
 
 write_rds(tdran, "data/td/tdran.rds")
@@ -147,6 +151,17 @@ tddm <- raw %>%
 write_rds(tddm, "data/td/tddm.rds")
 
 
+
+tdds <- raw %>% 
+  pick("eos") %>% 
+  labeliser(codelist = items) %>% 
+  select(subjectid, starts_with("eos")) %>% 
+  select(-ends_with("cd"), -(eosaechk:eosaeyes1))
+
+tdds <- tddm %>% 
+  select(sitename, sitecode, subjectid, dmicdat) %>% 
+  left_join(select(tdran, subjectid, randt), by="subjectid") %>% 
+  left_join(tdds, by = "subjectid")
 
 
 ###################################################
