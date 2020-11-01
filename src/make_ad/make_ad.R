@@ -19,8 +19,6 @@ items <- raw %>% pick("items")
 adsl <- tddm %>% 
   select(-eventdate) %>% 
   left_join(tdran, by= "subjectid") %>% 
-  labeliser(codelist = items) %>% 
-  labelled::set_variable_labels(ranavail = "Available treatments") %>% 
   filter(!is.na(randt))
 
 write_rds(adsl, "data/ad/adsl.rds")
