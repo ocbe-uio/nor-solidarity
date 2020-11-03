@@ -85,8 +85,19 @@ tdran <- bind_rows(pick(raw,"ran"), pick(raw,"ran123"), pick(raw,"ran13"), pick(
     !is.na(ran123dt) ~ list(c("Standard of care (SOC)", "Hydroxychloroquine + SOC", "Remdesivir + SOC")),
     !is.na(ran13dt) ~ list(c("Standard of care (SOC)", "Remdesivir + SOC"))
   )) %>% 
-  select(subjectid, rantrt, randt, ranavail) %>% 
-  labelled::set_variable_labels(ranavail = "Available treatments")
+  mutate(ranavail_rem = if_else( !is.na(whoarms3))
+    !is.na(whoarms3) ~ "Yes",
+    !is.na(ran123dt) ~ "Yes",
+    !is.na(ran13dt) ~  "Yes")) %>% 
+  mutate(ranavail_hcq = case_when(
+    !is.na(whoarms2) ~ "Yes",
+    !is.na(ran123dt) ~ "Yes",
+    !is.na(randt) ~  "Yes")) %>% 
+  mutate(across(starts_with("ranavail_"), ~ factor(.x, levels = c("No", "Yes", ordered = TRUE)))) %>% 
+  select(subjectid, rantrt, randt, starts_with("ranavail")) %>% 
+  labelled::set_variable_labels(ranavail = "Available treatments",
+                                ranavail_rem = "Remdesivir available?",
+                                ranavail_hcq = "Hydroxychloroquine available?")
 
 
 write_rds(tdran, "data/td/tdran.rds")
