@@ -6,12 +6,19 @@ RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
 TD = data/td/tddm.rds data/td/tdran.rds data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdvs.rds 
 AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds
 
+# Set this to FALSE when for the true results.  
+PSEUDORANDOM = TRUE 
+
+
+
+
+.PHONY: all td ad raw dmc_report
 all: td ad raw 
 td: $(TD)
 ad: $(AD)
 raw: data/raw/raw.rds
 dmc_report: results/dmc/$(DMC_REPORT)
-.PHONY: all td ad raw dmc_report
+
 
 
 data/raw/raw.rds:  $(RAW_CSV) src/make_raw/make_raw.R src/external/functions.R
@@ -22,7 +29,7 @@ $(TD): data/raw/raw.rds src/external/functions.R src/make_td/make_td.R
 	Rscript src/make_td/make_td.R
 	
 $(AD): $(TD) data/raw/raw.rds src/external/functions.R src/make_ad/make_ad.R
-	Rscript src/make_ad/make_ad.R
+	Rscript src/make_ad/make_ad.R $(PSEUDORANDOM)
 	
 results/dmc/$(DMC_REPORT): $(AD) src/make_reports/dmc_report.Rmd
 	Rscript -e 'rmarkdown::render("src/make_reports/dmc_report.Rmd", \
