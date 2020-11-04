@@ -5,21 +5,57 @@ library(readr)
 
 source("src/external/functions.R")
 
+#######################
+# Set this parameter to false in the Makefile to run the true allocation results.
+#######################
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args)==0) {
+  pseudorand <- TRUE #default to pseudorandom treatment
+} else if (length(args) != 0) {
+  pseudorand <- args[1]
+}
 
 ################
 # Make adsl
 ################
 
+raw <- read_rds("data/raw/raw.rds")
+
 tddm <- read_rds("data/td/tddm.rds")
 tdran <- read_rds("data/td/tdran.rds")
-raw <- read_rds("data/raw/raw.rds")
 items <- raw %>% pick("items")
+tdsq <- read_rds("data/td/tdsq.rds")
+tdds <- read_rds("data/td/tdds.rds")
 
 
-adsl <- tddm %>% 
-  select(-eventdate) %>% 
-  left_join(tdran, by= "subjectid") %>% 
-  filter(!is.na(randt))
+tmp <- tdsq %>% 
+  filter(!(eventid %in% c("V00", "READM"))) %>% 
+  group_by(subjectid) %>% 
+  summarise(tmp2 = min(sq_mort), .groups = "drop_last") %>% 
+  ungroup
+
+adsl <- tdds %>% 
+  left_join(tdran %>% select(-randt), by= "subjectid") %>% 
+  left_join(tmp, by = "subjectid") %>%
+  left_join(tddm %>% select(subjectid, age_calc, sq_admis, sex, dmini), by = "subjectid") %>% 
+  mutate(randomised = if_else(!is.na(randt), "Yes", "No")) %>% 
+  mutate(fasex1 = if_else(is.na(tmp2), "Yes", "No"),
+         fasex2 = if_else(eosreascd == 3, "Yes", "No", missing = "No"),
+         fas = if_else(fasex1 == "No" & fasex2 == "No", "Yes", "No")) %>% 
+  labelled::set_variable_labels(fasex1 = "Excluded from FAS, no post-randomisation evaluations?", 
+                                fasex2 = "Excluded from FAS, incorrect inclusion?",
+                                fas = "Included in FAS?", 
+                                randomised = "Randomised?") %>% 
+  select(-tmp2, -(eosyn:eosdtdat))
+
+print(paste0("Pseudorandomisation is ", pseudorand))
+if (pseudorand) {
+  adsl <- adsl %>% 
+    group_by(ranavail_rem, ranavail_hcq) %>% 
+    mutate(rantrt = sample(rantrt,n(), replace = FALSE)) %>% 
+    ungroup
+}
 
 write_rds(adsl, "data/ad/adsl.rds")
 
@@ -30,8 +66,8 @@ write_rds(adsl, "data/ad/adsl.rds")
 tdae <- read_rds("data/td/tdae.rds")
 
 adae <- adsl %>% 
-  select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt) %>%
-  left_join(tdae) %>% 
+  select(sitename, subjectid, dmicdat, age_calc, randt, rantrt) %>%
+  left_join(tdae, by =  c("sitename", "subjectid")) %>% 
   labeliser() %>% 
   mutate(anyae = if_else(is.na(aespid), 0, 1),
          sae = if_else(is.na(aespid), 0, aesercd)
@@ -51,13 +87,11 @@ readr::write_rds(adae, "data/ad/adae.rds")
 ##################
 
 
-raw <- read_rds("data/raw/raw.rds")
-
 adeff <- adsl %>% 
-  select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt, sex, sq_admis) %>%
-  left_join(pick(raw, "dph"), by = c("sitename", "sitecode", "subjectid") ) %>% 
+  select(sitename, subjectid, dmicdat, age_calc, randt, rantrt, sex, sq_admis) %>%
+  left_join(pick(raw, "dph"), by = c("sitename", "subjectid") ) %>% 
   select(-(siteseq:designversion)) %>% 
-  left_join(pick(raw, "eos"), by = c("sitename", "sitecode", "subjectid")) %>% 
+  left_join(pick(raw, "eos"), by = c("sitename", "subjectid")) %>% 
   select(-(siteseq:designversion)) %>% 
   select(-ends_with("cd")) %>% 
   labeliser() %>% 
@@ -82,36 +116,104 @@ write_rds(adeff, "data/ad/adeff.rds")
 
 
 
-# lungimaging <- adsl %>%
-#   left_join(pick(raw, "di") %>% select(subjectid, dixraydt, diinfil), by = "subjectid") %>%
-#   arrange(subjectid, dixraydt) %>%
-#   filter(dixraydt <= randt) %>%
-#   group_by(subjectid) %>% mutate(n = row_number()) %>%
-#   filter(n == 1) %>%
-#   mutate(dipatchy = "Unknown") %>%
-#   select(subjectid, diinfil, dipatchy)
-# 
-# adex <- suppressWarnings(
-#   adsl %>% 
-#   left_join(pick(raw,"dr") %>% select(subjectid, drremds, drremdt), by="subjectid") %>% 
-#   left_join(pick(raw, "da") %>% select(subjectid, dahcdt, dabcno), by = "subjectid") %>% 
-#   filter(drremds > 0 | dabcno > 0) %>% 
-#   group_by(subjectid) %>% 
-#   summarise(exrem_yn = if_else(any(drremds > 0), "Yes", "No", "No"), 
-#             exrem_stdt = min(drremdt,na.rm = TRUE),
-#             exrem_endt = max(drremdt, na.rm = TRUE),
-#             exhcq_yn = if_else(any(dabcno > 0), "Yes", "No", "No"), 
-#             exhcq_stdt = min(dahcdt, na.rm = TRUE),
-#             exhcq_endt = max(dahcdt, na.rm = TRUE)) %>% 
-#   mutate(exlop_yn = "No", 
-#          exlop_stdt = "", 
-#          exlop_endt = "", 
-#          exinf_yn = "No", 
-#          exinf_stdt = "",
-#          exinf_endt = "") %>% 
-#   arrange(subjectid) 
-#   )
-# 
+lungimaging <- adsl %>%
+  left_join(pick(raw, "di") %>% select(subjectid, dixraydt, diinfil), by = "subjectid") %>%
+  arrange(subjectid, dixraydt) %>%
+  filter(dixraydt <= randt) %>%
+  group_by(subjectid) %>% mutate(n = row_number()) %>%
+  filter(n == 1) %>%
+  mutate(dipatchy = "Unknown") %>%
+  select(subjectid, diinfil, dipatchy)
+
+
+
+
+
+adex <- tdex %>%  
+  mutate(
+    extrt = case_when(
+      !is.na(dahcdt) ~ "HCQ",
+      !is.na(drremdt) ~ "Remdesivir",
+      TRUE ~ ""),
+    exstdt =  case_when(
+      extrt == "HCQ" ~ dahcdt, 
+      extrt == "Remdesivir" ~ drremdt
+    ),
+    exendt = exstdt,
+    exdose = case_when(
+      extrt == "HCQ" ~ dabcno, 
+      extrt == "Remdesivir" ~ drremds,
+      TRUE ~ NA_real_
+    ),
+    exdisc = case_when(
+      extrt == "HCQ" ~ dadiyn_c, 
+      extrt == "Remdesivir" ~ dardisc
+    )
+  ) %>% 
+  select(subjectid, extrt, exstdt, exendt, exdose, exdisc ) %>% 
+  group_by(subjectid, extrt) %>% 
+  summarise(
+    exstdt = min(if_else(exdose>0, exstdt, Inf)), 
+    exendt = max(if_else(exdose > 0, exendt, -Inf)),
+    extrtdur = exendt - exstdt,
+    exmindose = min(exdose),
+    exmaxdose = max(exdose),
+    extotdose = sum(exdose),
+    exdisc = max(exdisc), .groups = "drop_last"
+    ) %>% 
+  labelled::set_variable_labels(
+    extrt = "Treatment administered",
+    exstdt = "Treatment start date",
+    exendt = "Treatment end date",
+    extrtdur = "Treatment duration (days)",
+    exmindose = "Minimum dose registered", 
+    exmaxdose = "Maximum dose registered",
+    extotdose = "Total dose", 
+    exdisc = "Any discrepances registered?"
+  ) 
+
+
+adex <- adsl %>%
+  left_join(adex, by =  "subjectid")
+
+# adsl %>%
+#   select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt) %>%
+#   left_join(tdex, by = c("sitename", "sitecode", "subjectid")) %>%
+#   group_by(subjectid, rantrt) %>%
+#   summarise(totdose_hcq = sum(dabcno),
+#             n_dose_hcq = sum(dabcno > 0),
+#             n_desc_hcq = sum(dadiyn_c =="Yes"),
+#             totdose_rem = sum(drremds),
+#             n_dose_rem = sum(drremds >0),
+#             n_desc_rem = sum(dardisc == "Yes"),
+#             .groups = "drop_last") %>%
+#   filter(rantrt != "Standard of care (SOC)") %>%
+#   mutate(totdose = if_else(rantrt == "Hydroxychloroquine + SOC", totdose_hcq, totdose_rem),
+#          n_dose = if_else(rantrt == "Hydroxychloroquine + SOC", n_dose_hcq, n_dose_rem),
+#          n_desc = if_else(rantrt == "Hydroxychloroquine + SOC", n_desc_hcq, n_desc_rem),
+#          any_desc = n_desc > 0) %>%
+#   group_by(rantrt) %>%
+#   summarise(median_totdose = quantile(totdose, 0.5, na.rm = TRUE),
+#             q1_totdose = quantile(totdose, 0.25, na.rm = TRUE),
+#             q3_totdose = quantile(totdose, 0.75, na.rm = TRUE),
+#             median_no_doses = median(n_dose,0.5,  na.rm = TRUE),
+#             q1_no_doses = quantile(n_dose, 0.25, na.rm = TRUE),
+#             q3_no_doses = quantile(n_dose, 0.75, na.rm = TRUE),
+#             n_anydesc = sum(any_desc, na.rm = TRUE),
+#             n = n(),
+#             .groups = "drop_last") %>%
+#   mutate(`Total dose, median (IQR), mg` = glue("{median_totdose} ({q1_totdose} - {q3_totdose})"),
+#          `Days with treatment, median (IQR)` = glue("{median_no_doses} ({q1_no_doses} - {q3_no_doses})"),
+#          `Patients with any treatment discrepencies, n (%)` = glue("{n_anydesc} ({round(100*n_anydesc/n, digits = 1)}%)")) %>%
+#   select(-(median_totdose:n)) %>%
+#   pivot_longer(-rantrt) %>%
+#   pivot_wider(names_from = rantrt, values_from = value) %>%
+#   rename(Parameter = name) %>%
+#   knitr::kable(booktabs = TRUE,
+#                caption = "Exposure to study treatment")
+
+
+
 # # adresp <- adsl %>% 
 # #   left_join(adeff %>% select(subjectid, outcomedat), by = "subjectid") %>% 
 # #   left_join(pick(raw, "vs") %>% select(subjectid, vsair, vshigh, eventid, eventdate), by="subjectid") %>% 

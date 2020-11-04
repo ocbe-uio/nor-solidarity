@@ -58,6 +58,11 @@ tdme <- raw %>%
   select(sitename, sitecode, subjectid,  starts_with("me")) %>% 
   select(-ends_with("cd"))
 
+tddph <- raw %>% 
+  pick("dph") %>% 
+  labeliser(codelist = items) %>% 
+  select(subjectid, dphad, dphdisc, dphdisccd) 
+
 
 
 
@@ -128,14 +133,14 @@ write_rds(tdran, "data/td/tdran.rds")
 
 tddm <- raw %>% 
   pick("dm") %>% 
-  select(sitename, sitecode, subjectid, eventdate, starts_with("dm"), sex, brthdat) %>% 
+  select(sitename, subjectid, eventdate, starts_with("dm"), sex, brthdat) %>% 
   select(-ends_with("cd"), -dmwhoyn) %>% 
   labeliser(codelist = items) %>% 
   mutate(age_calc = interval(brthdat, dmicdat) %/% months(1), 
          age_calc = age_calc / 12,
          age_calc = round(age_calc, 1)) %>% 
   labelled::set_variable_labels(age_calc = "Age (years)") %>% 
-  select(-dmsite, -dmransys, -dmwhoid, -dmcbp, -dm1, -dmini) %>% 
+  select(-dmsite, -dmransys, -dmwhoid, -dmcbp, -dm1) %>% 
   # Add admittance at baseline
   left_join(tdsq %>% filter(eventid == "V00") %>% select(subjectid, sq_admis), by = "subjectid") %>% 
   labelled::set_variable_labels(sq_admis = "Admitted to (baseline)") %>% 
@@ -162,18 +167,20 @@ tddm <- raw %>%
 write_rds(tddm, "data/td/tddm.rds")
 
 
-
 tdds <- raw %>% 
   pick("eos") %>% 
   labeliser(codelist = items) %>% 
   select(subjectid, starts_with("eos")) %>% 
-  select(-ends_with("cd"), -(eosaechk:eosaeyes1))
+  select( -(eosaechk:eosaeyes1cd), -eosyncd)
+
 
 tdds <- tddm %>% 
-  select(sitename, sitecode, subjectid, dmicdat) %>% 
+  select(sitename, subjectid, dmicdat) %>% 
   left_join(select(tdran, subjectid, randt), by="subjectid") %>% 
-  left_join(tdds, by = "subjectid")
+  left_join(tdds, by = "subjectid") %>% 
+  left_join(tddph, by = "subjectid")
 
+write_rds(tdds, "data/td/tdds.rds")
 
 ###################################################
 # Make tdae
