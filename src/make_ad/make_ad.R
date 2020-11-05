@@ -2,6 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(glue)
 library(readr)
+library(labelled)
 
 source("src/external/functions.R")
 
@@ -12,6 +13,7 @@ source("src/external/functions.R")
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args)==0) {
   pseudorand <- TRUE #default to pseudorandom treatment
+  set.seed = 42
 } else if (length(args) != 0) {
   pseudorand <- args[1]
 }
@@ -56,22 +58,29 @@ adsl <- tdds %>%
                                 randomised = "Randomised?", 
                                 fas_rem = "Included in FAS with remdesivir available?",
                                 fas_hcq = "Included in FAS with HCQ available?") %>% 
-  select(-tmp2, -(eosyn:eosdtdat))
+  select(-tmp2, -(eosyn:eosdtdat)) %>% 
+  arrange(subjectid)
+
 
 print(paste0("Pseudorandomisation is ", pseudorand))
 if (pseudorand) {
   
-  adsl <- adsl %>%
+  varlabels <- labelled::var_label(adsl, unlist = TRUE)
+  
+  adsl2 <- adsl %>%
+    select(subjectid, rantrt:fas_hcq ) %>% 
+    group_by(subjectid) %>% 
+    nest() %>% 
     ungroup() %>% 
-    nest_by(sitename, subjectid)
+    mutate(subjectid = sample(subjectid,n(), replace = FALSE)) %>% 
+    unnest(data) 
   
+  adsl <- adsl %>% 
+    select(-(rantrt:fas_hcq)) %>% 
+    left_join(adsl2, by = "subjectid")
   
-    group_by(vars(sitename:dmini)) %>%
-    nest()
-    mutate(rantrt = sample(rantrt,n(), replace = FALSE),
-           rantrtcd = as.numeric(rantrt)) %>%
-
-    ungroup
+  labelled::var_label(adsl) <- varlabels
+  
 }
 
 write_rds(adsl, "data/ad/adsl.rds")
