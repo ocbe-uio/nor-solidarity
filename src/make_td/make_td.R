@@ -61,7 +61,12 @@ tdme <- raw %>%
 tddph <- raw %>% 
   pick("dph") %>% 
   labeliser(codelist = items) %>% 
-  select(subjectid, dphad, dphdisc, dphdisccd) 
+  group_by(subjectid) %>% 
+  summarise(dphstdt = min(dphad), dphendt = max(dphad), .groups = "drop_last") %>% 
+  labelled::set_variable_labels(dphstdt = "First discharge date",
+                                dphendt = "Last discharge date") %>% 
+  select(subjectid, dphstdt, dphendt) %>% 
+  ungroup
 
 
 
@@ -84,21 +89,16 @@ tdran <- bind_rows(pick(raw,"ran"), pick(raw,"ran123"), pick(raw,"ran13"), pick(
     !is.na(rantrt123) ~ rantrt123,
     !is.na(rantrt13) ~ rantrt13
   )) %>% 
- 
   mutate(randt = case_when(
     !is.na(whorandt) ~ whorandt,
     !is.na(randt) ~ randt,
     !is.na(ran123dt) ~ ran123dt,
     !is.na(ran13dt) ~ ymd(ran13dt)
   )) %>% 
-  
-
-  # mutate(ranavail_hcq = case_when(
-  #   !is.na(whoarms2) ~ "Yes",
-  #   !is.na(ran123dt) ~ "Yes",
-  #   !is.na(randt) ~  "Yes")) %>% 
+  mutate(rantrtcd = as.numeric(rantrt)) %>%
   mutate(across(starts_with("ranavail_"), ~ factor(.x, levels = c("No", "Yes"), ordered = TRUE))) %>% 
-  select(subjectid, rantrt, randt, starts_with("ranavail")) %>% 
+  select(subjectid, rantrt, rantrtcd, randt, starts_with("ranavail")) %>% 
+  labeliser(codelist = items) %>% 
   labelled::set_variable_labels(ranavail_rem = "Remdesivir available?",
                                 ranavail_hcq = "Hydroxychloroquine available?") %>% 
   arrange(randt)

@@ -43,6 +43,7 @@ This is the report for the first interim analysis of the NOR-SOLIDARITY trial. T
 
 ```{r inclusionplot, echo = FALSE}
 adsl %>% 
+  filter(fas == "Yes") %>% 
   arrange(randt) %>% 
   mutate(n = row_number()) %>% 
   gf_line(n ~ randt, color = wes_palette(n=1, name = "Darjeeling1")) %>% 
@@ -55,7 +56,9 @@ adsl %>%
 ```{r by-site, echo = FALSE}
 
 
-adsl %>% group_by(sitename) %>% 
+adsl %>% 
+  filter(fas == "Yes") %>% 
+  group_by(sitename) %>% 
   mutate(n=n()) %>% 
   arrange(-n) %>%  
   gf_bar(~ reorder(sitename, -n), fill = wes_palette(n=1, name = "Darjeeling1")) %>% 
@@ -71,7 +74,10 @@ adsl %>% group_by(sitename) %>%
 
 
 
-adsl %>% group_by(rantrt) %>% summarise(n=n(), .groups = "drop_last") %>% 
+adsl %>% 
+  filter(fas == "Yes") %>% 
+  group_by(rantrt) %>% 
+  summarise(n=n(), .groups = "drop_last") %>% 
 ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
   geom_bar(stat = "identity") + 
   geom_text(aes(label=n), vjust=1.6, color="white",
@@ -79,7 +85,36 @@ ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
   scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
   theme_classic() + 
   theme(legend.position = "none") + 
-  labs(x="", y = "Number randomised")
+  labs(x="", y = "Number randomised (all) in FAS")
+
+adsl %>% 
+  filter(fas_hcq == "Yes") %>% 
+  group_by(rantrt) %>% 
+  summarise(n=n(), .groups = "drop_last") %>% 
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label=n), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5) +
+  scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
+  theme_classic() + 
+  theme(legend.position = "none") + 
+  labs(x="", y = "Number randomised (HCQ available) in FAS")
+
+
+adsl %>% 
+  filter(fas_rem == "Yes") %>% 
+  group_by(rantrt) %>% 
+  summarise(n=n(), .groups = "drop_last") %>% 
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label=n), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5) +
+  scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
+  theme_classic() + 
+  theme(legend.position = "none") + 
+  labs(x="", y = "Number randomised (remdesivir available) in FAS")
+
+
 
 
 ```
@@ -144,7 +179,7 @@ stats_exec <- function(f, data, var, group, ...){
 ```
 
 ```{r headers}
-arms <- c("SOC", "SOC + HCQ", "SOC + Remdesivir")
+arms_tot <- c("SOC", "SOC + HCQ", "SOC + Remdesivir")
 total_n <- n_distinct(adsl$subjectid)
 
 header <- adsl %>%

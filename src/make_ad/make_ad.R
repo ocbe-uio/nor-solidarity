@@ -36,24 +36,41 @@ tmp <- tdsq %>%
   ungroup
 
 adsl <- tdds %>% 
-  left_join(tdran %>% select(-randt), by= "subjectid") %>% 
-  left_join(tmp, by = "subjectid") %>%
   left_join(tddm %>% select(subjectid, age_calc, sq_admis, sex, dmini), by = "subjectid") %>% 
+  left_join(tmp, by = "subjectid") %>%
+  left_join(tdran %>% select(-randt), by= "subjectid") %>% 
   mutate(randomised = if_else(!is.na(randt), "Yes", "No")) %>% 
   mutate(fasex1 = if_else(is.na(tmp2), "Yes", "No"),
          fasex2 = if_else(eosreascd == 3, "Yes", "No", missing = "No"),
-         fas = if_else(fasex1 == "No" & fasex2 == "No", "Yes", "No")) %>% 
+         fas = if_else(fasex1 == "No" & fasex2 == "No", "Yes", "No"),
+         fas_rem = if_else(fas == "Yes" & 
+                             ranavail_rem == "Yes" & 
+                             (rantrtcd %in% c(1,3) ), "Yes", "No"),
+         fas_hcq = if_else(fas == "Yes" & 
+                             ranavail_hcq == "Yes" &
+                             rantrtcd %in% c(1,2), "Yes", "No")) %>% 
+  mutate(across(starts_with("fas"), ~ factor(.x, levels = c("No", "Yes"), ordered = TRUE))) %>% 
   labelled::set_variable_labels(fasex1 = "Excluded from FAS, no post-randomisation evaluations?", 
                                 fasex2 = "Excluded from FAS, incorrect inclusion?",
                                 fas = "Included in FAS?", 
-                                randomised = "Randomised?") %>% 
+                                randomised = "Randomised?", 
+                                fas_rem = "Included in FAS with remdesivir available?",
+                                fas_hcq = "Included in FAS with HCQ available?") %>% 
   select(-tmp2, -(eosyn:eosdtdat))
 
 print(paste0("Pseudorandomisation is ", pseudorand))
 if (pseudorand) {
-  adsl <- adsl %>% 
-    group_by(ranavail_rem, ranavail_hcq) %>% 
-    mutate(rantrt = sample(rantrt,n(), replace = FALSE)) %>% 
+  
+  adsl <- adsl %>%
+    ungroup() %>% 
+    nest_by(sitename, subjectid)
+  
+  
+    group_by(vars(sitename:dmini)) %>%
+    nest()
+    mutate(rantrt = sample(rantrt,n(), replace = FALSE),
+           rantrtcd = as.numeric(rantrt)) %>%
+
     ungroup
 }
 
@@ -106,7 +123,9 @@ adeff <- adsl %>%
     !is.na(eosreas) ~ eosdat,
     TRUE ~ date(NA)
   )) %>% 
-  mutate(outcome = factor(outcome, levels = c("Alive and discharged",  "Withdrawn", "Ongoing","Dead"), ordered = TRUE)) %>% 
+  mutate(outcome = factor(outcome, 
+                          levels = c("Alive and discharged",  "Withdrawn", "Ongoing","Dead"), 
+                          ordered = TRUE)) %>% 
   group_by(subjectid) %>% 
   arrange(subjectid, outcomedat) %>% 
   filter(row_number() == 1) %>% 
@@ -116,18 +135,7 @@ write_rds(adeff, "data/ad/adeff.rds")
 
 
 
-lungimaging <- adsl %>%
-  left_join(pick(raw, "di") %>% select(subjectid, dixraydt, diinfil), by = "subjectid") %>%
-  arrange(subjectid, dixraydt) %>%
-  filter(dixraydt <= randt) %>%
-  group_by(subjectid) %>% mutate(n = row_number()) %>%
-  filter(n == 1) %>%
-  mutate(dipatchy = "Unknown") %>%
-  select(subjectid, diinfil, dipatchy)
-
-
-
-
+tdex <- read_rds("data/td/tdex.rds")
 
 adex <- tdex %>%  
   mutate(
@@ -175,6 +183,20 @@ adex <- tdex %>%
 
 adex <- adsl %>%
   left_join(adex, by =  "subjectid")
+
+
+# 
+# lungimaging <- adsl %>%
+#   left_join(pick(raw, "di") %>% select(subjectid, dixraydt, diinfil), by = "subjectid") %>%
+#   arrange(subjectid, dixraydt) %>%
+#   filter(dixraydt <= randt) %>%
+#   group_by(subjectid) %>% mutate(n = row_number()) %>%
+#   filter(n == 1) %>%
+#   mutate(dipatchy = "Unknown") %>%
+#   select(subjectid, diinfil, dipatchy)
+# 
+# 
+
 
 # adsl %>%
 #   select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt) %>%
