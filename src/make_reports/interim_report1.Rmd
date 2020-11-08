@@ -220,21 +220,46 @@ header_rem = adsl %>%
 dm_table <- tribble(
   ~text, ~f, ~var, ~param,
   "Age (years)", "mean_sd", "age_calc", list(digits = 1), 
-  "Female, n (%)", "n_pct", "sex", list(level = "Female")
+  "Female, n (%)", "n_pct", "sex", list(level = "Female"), 
+  "Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
+  "Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
+  "Body Mass Index (kg/m^2^)", "mean_sd", "vsbmi", list(digits = 0),
+  "Obese, n(%)", "n_pct", "vsobese", list(level="Obese"),
+  "Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
+  "Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0), 
+  "Mean Arterial Blood Pressure (mmHg)", "mean_sd", "vsmap", list(digits = 0),
+  "Temperature (°C)", "mean_sd", "vstemp", list(digits = 1), 
+  "Oxygen requirement (Litres O~2~ per min)", "mean_sd", "lito2min", list(digits = 1),
+  "No information on oxygen (litres O~2~ per min)", "n_pct", "lito2min_reg", list(level = "No")
 )
 
 
-
+dm_table_f <- function(data, caption, header){
 dm_table %>%
-  mutate(data = list(adsl),
+  mutate(data = list(data),
          group = "rantrt") %>%
   mutate(res = pmap(list(f, data, var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
   unnest(c(res, id)) %>%
   pivot_wider(values_from = res, names_from = id) %>%
-  select(text, all_of(levels(adsl$rantrt))) %>%
+  select(text, any_of(levels(adsl$rantrt))) %>%
   knitr::kable(col.names = c("Parameter", header),
-               caption = "Demographics")
+               caption = caption)
+}
+
+addm_tot <- adsl %>% select(-age_calc, -sq_admis, -sex) %>% 
+  left_join(tddm, by ="subjectid") %>% filter(fas == "Yes")
+addm_hcq <- adsl  %>% select(-age_calc, -sq_admis, -sex) %>% 
+  left_join(tddm, by ="subjectid") %>% filter(fas_hcq == "Yes")
+addm_rem <- adsl  %>% select(-age_calc, -sq_admis, -sex) %>% 
+  left_join(tddm, by ="subjectid") %>% filter(fas_rem == "Yes")
+
+
+dm_table_f(addm_tot, "Demographics, all arms (FAS)", header_tot)
+
+dm_table_f(addm_hcq, "Demographics, HCQ (FAS)", header_hcq)
+
+dm_table_f(addm_rem, "Demographics, Remdesivir (FAS)", header_rem)
 
 ```
 

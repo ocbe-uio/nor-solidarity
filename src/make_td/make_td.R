@@ -68,6 +68,12 @@ tddph <- raw %>%
   select(subjectid, dphstdt, dphendt) %>% 
   ungroup
 
+tdrc <- raw %>% 
+  pick("rc") %>% 
+  labeliser(codelist = items) %>% 
+  select(sitename, sitecode, subjectid, starts_with("event"), starts_with("rc")) %>% 
+  select(-ends_with("cd"))
+
 
 
 
@@ -150,7 +156,15 @@ tddm <- raw %>%
               select(subjectid, vsweight, vsheight, vsbmi, vsobese, 
                      vssys, vsdia, vsmap, vstemp, vslitmin), 
             by = "subjectid") %>% 
-  labelled::set_variable_labels(sq_admis = "Admitted to (baseline)") %>% 
+  left_join(tdrc %>% 
+              filter(eventid == "V00") %>% 
+              select(subjectid, rclmin), 
+            by = "subjectid") %>% 
+  mutate(lito2min = if_else(is.na(vslitmin),rclmin, vslitmin),
+         lito2min_reg = if_else(is.na(vslitmin) & is.na(rclmin),"No", "Yes")) %>% 
+  labelled::set_variable_labels(lito2min = "Oxygen requirement (litres O2 per min)",
+                                lito2min_reg = "Litres O2 per min registered?") %>%
+  select(-vslitmin, -rclmin) %>% 
   # Add baseline SOFA score
   left_join(tdsc %>% filter(eventid == "V00") %>% select(subjectid, scsumsc), by = "subjectid") %>% 
   labelled::set_variable_labels(scsumsc = "Baseline SOFA score") %>% 
