@@ -109,7 +109,7 @@ ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
   geom_bar(stat = "identity") + 
   geom_text(aes(label=n), vjust=1.6, color="white",
             position = position_dodge(0.9), size=3.5) +
-  scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
+  scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")[c(1,3)]) +
   theme_classic() + 
   theme(legend.position = "none") + 
   labs(x="", y = "Number randomised (remdesivir available) in FAS")
@@ -182,7 +182,12 @@ stats_exec <- function(f, data, var, group, ...){
 arms_tot <- c("SOC", "SOC + HCQ", "SOC + Remdesivir")
 total_n <- n_distinct(adsl$subjectid)
 
-header <- adsl %>%
+arms_hcq <- arms_tot[c(1,2)]
+arms_rem <- arms_tot[c(1,3)]
+
+header <- function(data, arms){
+
+ data %>%
   group_by(rantrt, subjectid) %>%
   summarise(n=n(), .groups = "drop_last") %>%
   group_by(rantrt) %>%
@@ -192,7 +197,19 @@ header <- adsl %>%
   mutate(txt = paste0(armtxt, " (N=", n, ")")) %>%
   select(txt) %>%
   deframe
+}
 
+header_tot = adsl %>% 
+  filter(fas=="Yes") %>% 
+  header(arms_tot)
+
+header_hcq = adsl %>% 
+  filter(fas_hcq=="Yes") %>% 
+  header(arms_hcq)
+
+header_rem = adsl %>% 
+  filter(fas_rem=="Yes") %>% 
+  header(arms_rem)
 
 ```
 
