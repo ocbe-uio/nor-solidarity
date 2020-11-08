@@ -61,6 +61,9 @@ adsl <- tdds %>%
   select(-tmp2, -(eosyn:eosdtdat)) %>% 
   arrange(subjectid)
 
+###############
+# Set up the pseudorandomisation list. 
+##############
 
 print(paste0("Pseudorandomisation is ", pseudorand))
 if (pseudorand) {
