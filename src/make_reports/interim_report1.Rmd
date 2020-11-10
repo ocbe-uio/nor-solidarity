@@ -126,7 +126,7 @@ ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
 
 # Demographics
 
-```{r dm-functions}
+```{r table-functions}
 mean_sd <- function(data, var, group, digits = 1) {
   var <- ensym(var)
   group <- ensym(group)

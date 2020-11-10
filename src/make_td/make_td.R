@@ -49,7 +49,7 @@ tdef <- raw %>%
 tdoa <- raw %>% 
   pick("oa") %>% 
   labeliser(codelist = items) %>% 
-  select(sitename, sitecode, subjectid,  starts_with("oa")) %>% 
+  select(subjectid,  starts_with("oa")) %>% 
   select(-ends_with("cd"))
 
 tdme <- raw %>% 
@@ -71,7 +71,7 @@ tddph <- raw %>%
 tdrc <- raw %>% 
   pick("rc") %>% 
   labeliser(codelist = items) %>% 
-  select(sitename, sitecode, subjectid, starts_with("event"), starts_with("rc")) %>% 
+  select(subjectid, starts_with("event"), starts_with("rc")) %>% 
   select(-ends_with("cd"))
 
 
@@ -173,7 +173,9 @@ tddm <- raw %>%
   # Add epidemiological factors
   left_join(tdef %>%  select(-sitename, -sitecode), by = "subjectid")  %>% 
   # Add duration of disease etc
-  left_join(tdoa %>%  select(-sitename, -sitecode), by = "subjectid") %>% 
+  left_join(tdoa, by = "subjectid") %>% 
+  mutate(sympdur = oaadm_h - oasympdt) %>% 
+  labelled::set_variable_labels(sympdur = "Symptom duration at admission (days") %>% 
   # Add baseline medications
   left_join(tdme %>%  select(-sitename, -sitecode), by = "subjectid")
   
@@ -190,6 +192,7 @@ tdds <- raw %>%
 
 tdds <- tddm %>% 
   select(sitename, subjectid, dmicdat) %>% 
+  left_join(tdoa, by = "subjectid") %>% 
   left_join(select(tdran, subjectid, randt), by="subjectid") %>% 
   left_join(tdds, by = "subjectid") %>% 
   left_join(tddph, by = "subjectid")
