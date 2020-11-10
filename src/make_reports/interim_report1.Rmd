@@ -224,15 +224,29 @@ dm_table <- tribble(
   "Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
   "Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
   "Body Mass Index (kg/m^2^)", "mean_sd", "vsbmi", list(digits = 0),
-  "Obese, n(%)", "n_pct", "vsobese", list(level="Obese"),
+  "Obese (BMI > 30 kg/m^2^), n(%)", "n_pct", "vsobese", list(level="Obese"),
   "Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
   "Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0), 
   "Mean Arterial Blood Pressure (mmHg)", "mean_sd", "vsmap", list(digits = 0),
   "Temperature (°C)", "mean_sd", "vstemp", list(digits = 1), 
   "Oxygen requirement (Litres O~2~ per min)", "mean_sd", "lito2min", list(digits = 1),
-  "No information on oxygen (litres O~2~ per min)", "n_pct", "lito2min_reg", list(level = "No")
+  "No information on oxygen (litres O~2~ per min)", "n_pct", "lito2min_reg", list(level = "No"),
+  "**Comorbidities**", "empty", "", list(),
+  " Chronic cardiac disease, including congenital heart disease", "n_pct", "cc_card", list(level = "Yes"),
+  " Hypertension, n(%)", "n_pct", "cc_ht", list(level = "Yes"),
+  " Chronic pulmonary disease, n(%)", "n_pct", "cc_copd", list(level = "Yes"),
+  " Chronic kidney disease, n(%)", "n_pct", "cc_ckd", list(level = "Yes"),
+  " Autoimmune disease, n(%)", "n_pct", "cc_aid", list(level = "Yes"),
+  " Diabetes, n(%)", "n_pct", "cc_diab", list(level = "Yes"),
+  " Cognitive impairment/dementia, n(%)", "n_pct", "cc_cogn", list(level = "Yes"),
+  " Neurological disorder, n(%)", "n_pct", "cc_neur", list(level = "Yes"),
+  " Cancer, n(%)", "n_pct", "cc_cance", list(level = "Yes"),
+  " Cirrhosis, n(%)", "n_pct", "cc_cirr", list(level = "Yes"),
+  " Asthma, n(%)", "n_pct", "cc_asthm", list(level = "Yes"),
+  " HIV, n(%)", "n_pct", "cc_hiv", list(level = "Yes"),
+  " Active TB, n(%)", "n_pct", "cc_tb", list(level = "Yes")
+  
 )
-
 
 dm_table_f <- function(data, caption, header){
 dm_table %>%
