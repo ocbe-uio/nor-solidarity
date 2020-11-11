@@ -124,7 +124,7 @@ ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
 
 
 
-# Demographics
+
 
 ```{r table-functions}
 mean_sd <- function(data, var, group, digits = 1) {
@@ -186,7 +186,7 @@ empty <- function(data, var, group, ...){
     deframe
 }
 
-missing_f <-  function(data, var, group) {
+missing_f <-  function(data, var, group, ...) {
   var <- ensym(var)
   group <- ensym(group)
   data %>% 
@@ -208,6 +208,33 @@ stats_exec <- function(f, data, var, group, ...){
 }
 
 ```
+
+#Patient flow
+
+```{r patient-flow}
+fas_table <- tribble(
+  ~text, ~f, ~var, ~param,   
+  "Enrolled", "n_pct", "enrolled", list(level = "Yes"),
+  "Randomised", "n_pct", "randomised", list(level = "Yes"), 
+  "Included in FAS", "n_pct", "fas", list(level = "Yes"),
+  "Excluded from FAS, No post-randomisation information", "n_pct", "fasex1", list(level = "Yes"),
+  "Excluded from FAS, incorrect inclusion", "n_pct", "fasex2", list(level = "Yes")
+  )
+
+fas_table %>% 
+  mutate(data = list(adsl %>% mutate(tmp = "Enrolled")),
+         group = "tmp") %>% 
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>% 
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, Enrolled) %>% 
+  knitr::kable(col.names = c("Parameter", "Total"),
+               caption = "Patient flow")
+```
+
+
+# Demographics
 
 ```{r headers}
 arms_tot <- c("SOC", "SOC + HCQ", "SOC + Remdesivir")
@@ -254,16 +281,14 @@ dm_table <- tribble(
   "Female, n (%)", "n_pct", "sex", list(level = "Female"), 
   "Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
   "Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
-  "Body Mass Index (kg/m^2^)", "mean_sd", "vsbmi", list(digits = 0),
-  "Body Mass Index (kg/m^2^)", "median_iqr", "vsbmi", list(digits = 0),
+  "Body Mass Index (kg/m^2^) mean", "mean_sd", "vsbmi", list(digits = 0),
+  "Body Mass Index (kg/m^2^) median", "median_iqr", "vsbmi", list(digits = 0),
   "Obese (BMI > 30 kg/m^2^), n(%)", "n_pct", "vsobese", list(level="Obese"),
   "Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
   "Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0), 
   "Mean Arterial Blood Pressure (mmHg)", "mean_sd", "vsmap", list(digits = 0),
   "Temperature (°C)", "mean_sd", "vstemp", list(digits = 1), 
   "SOFA score", "mean_sd", "scsumsc", list(digits = 1),
-  "Oxygen requirement (Litres O~2~ per min)", "mean_sd", "lito2min", list(digits = 1),
-  "No information on oxygen (litres O~2~ per min)", "n_pct", "lito2min_reg", list(level = "No"),
   "**Comorbidities**", "empty", "", list(),
   " Chronic cardiac disease, including congenital heart disease", "n_pct", "cc_card", list(level = "Yes"),
   " Hypertension, n(%)", "n_pct", "cc_ht", list(level = "Yes"),
@@ -281,12 +306,26 @@ dm_table <- tribble(
   
 )
 
+labtable <- tddm %>% 
+  select(lbferres:lbwbcres) %>% 
+  var_label(unlist = TRUE)  
+  
+labtable <- tibble(text = labtable, 
+                   var = names(labtable),
+                   f = "median_iqr",
+                   param = list(tibble(digits = 1)))   
 
+dm_table <- dm_table %>%
+  add_row(tibble_row(text ="Median Laboratory values (IQR)", 
+                     f = "empty", var = "")) %>% 
+  add_row(labtable)
+  
+  
 
-dm_table_f <- function(data, caption, header){
-dm_table %>%
+dm_table_f <- function( data, table_temp, group = "rantrt", caption, header){
+table_temp %>%
   mutate(data = list(data),
-         group = "rantrt") %>%
+         group = group) %>%
   mutate(res = pmap(list(f, data, var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
   unnest(c(res, id)) %>%
@@ -296,6 +335,7 @@ dm_table %>%
                caption = caption)
 }
 
+
 addm_tot <- adsl %>% select(-age_calc, -sq_admis, -sex) %>% 
   left_join(tddm, by ="subjectid") %>% filter(fas == "Yes")
 addm_hcq <- adsl  %>% select(-age_calc, -sq_admis, -sex) %>% 
@@ -304,11 +344,18 @@ addm_rem <- adsl  %>% select(-age_calc, -sq_admis, -sex) %>%
   left_join(tddm, by ="subjectid") %>% filter(fas_rem == "Yes")
 
 
-dm_table_f(addm_tot, "Demographics, all arms (FAS)", header_tot)
+dm_table_f(addm_tot, dm_table, "Demographics, all arms (FAS)", header_tot)
 
-dm_table_f(addm_hcq, "Demographics, HCQ (FAS)", header_hcq)
+dm_table_f(addm_hcq, dm_table, "Demographics, HCQ (FAS)", header_hcq)
 
-dm_table_f(addm_rem, "Demographics, Remdesivir (FAS)", header_rem)
+dm_table_f(addm_rem, dm_table, "Demographics, Remdesivir (FAS)", header_rem)
+
+
+missing_table <- dm_table %>% 
+  mutate(f = if_else(var == "", "empty","missing_f")) 
+
+dm_table_f(addm_tot, missing_table, "Missing values, all arms (FAS)", header_tot)
+
 
 ```
 

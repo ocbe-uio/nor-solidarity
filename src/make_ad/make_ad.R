@@ -41,6 +41,7 @@ adsl <- tdds %>%
   left_join(tddm %>% select(subjectid, age_calc, sq_admis, sex, dmini), by = "subjectid") %>% 
   left_join(tmp, by = "subjectid") %>%
   left_join(tdran %>% select(-randt), by= "subjectid") %>% 
+  mutate(enrolled= if_else(!is.na(dmicdat), "Yes", "No")) %>% 
   mutate(randomised = if_else(!is.na(randt), "Yes", "No")) %>% 
   mutate(fasex1 = if_else(is.na(tmp2), "Yes", "No"),
          fasex2 = if_else(eosreascd == 3, "Yes", "No", missing = "No"),
@@ -51,11 +52,12 @@ adsl <- tdds %>%
          fas_hcq = if_else(fas == "Yes" & 
                              ranavail_hcq == "Yes" &
                              rantrtcd %in% c(1,2), "Yes", "No")) %>% 
-  mutate(across(starts_with("fas"), ~ factor(.x, levels = c("No", "Yes"), ordered = TRUE))) %>% 
+  mutate(across(c(starts_with("fas"), enrolled, randomised), ~ factor(.x, levels = c("No", "Yes"), ordered = TRUE))) %>% 
   labelled::set_variable_labels(fasex1 = "Excluded from FAS, no post-randomisation evaluations?", 
                                 fasex2 = "Excluded from FAS, incorrect inclusion?",
                                 fas = "Included in FAS?", 
                                 randomised = "Randomised?", 
+                                enrolled = "All patients with informed consent",
                                 fas_rem = "Included in FAS with remdesivir available?",
                                 fas_hcq = "Included in FAS with HCQ available?") %>% 
   select(-tmp2, -(eosyn:eosdtdat)) %>% 
