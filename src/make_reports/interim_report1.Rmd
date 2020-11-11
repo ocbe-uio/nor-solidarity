@@ -142,22 +142,36 @@ mean_sd <- function(data, var, group, digits = 1) {
     deframe
 }
 
+median_iqr <- function(data, var, group, digits = 1) {
+  var <- ensym(var)
+  group <- ensym(group)
+  data %>% 
+    group_by(!!group) %>% 
+    summarise(median = median(!!var, na.rm = TRUE), 
+              q1 = quantile(!!var, probs = 0.25, na.rm = TRUE), 
+              q3 = quantile(!!var, probs = 0.75, na.rm = TRUE), 
+              missing = sum(is.na(!!var))
+              , .groups = "drop_last") %>% 
+    mutate(across(c(median, q1, q3), ~round(.x, digits = digits))) %>% 
+    mutate(txt = paste0(median, " (", q1, " - ", q3, ")")) %>% 
+    select(group, txt) %>% 
+    deframe
+}
 
 n_pct <-  function(data, var, group, level = 1) {
   var <- ensym(var)
   group <- ensym(group)
   data %>% 
-    filter(!is.na(!!var)) %>% 
-    group_by(!!group, !!var) %>% 
-    summarise(n = n(), 
+    group_by(!!group, !!var, .drop = FALSE) %>% 
+    summarise(n = n(),
+              tot = n(), 
               .groups = "drop_last") %>% 
-    group_by(!!group) %>% 
-    mutate(tot = sum(n),
-           pct = round(n/tot*100,digits = 1)) %>% 
+    group_by(!!group, .drop = TRUE) %>% 
+    mutate(tot = sum(tot),
+           pct = round(n/tot*100, digits = 1)) %>% 
     mutate(txt = paste0(n, " (", pct, "%)")) %>% 
-    filter(!!var == !!level) %>% 
-    ungroup %>% 
-    select(group, txt) %>% 
+    filter(!!var == !!level & tot>0) %>%
+    select(group, txt) %>%
     deframe
 }
 
@@ -169,6 +183,23 @@ empty <- function(data, var, group, ...){
               .groups = "drop_last") %>% 
     mutate(txt = "") %>% 
     select(group,txt) %>% 
+    deframe
+}
+
+missing_f <-  function(data, var, group) {
+  var <- ensym(var)
+  group <- ensym(group)
+  data %>% 
+    group_by(!!group) %>% 
+    summarise(tot = n(),
+              non_miss = sum(!is.na(!!var)),
+              miss = sum(is.na(!!var)),
+              .groups = "drop_last") %>% 
+    group_by(!!group) %>%
+    mutate(pct = round(miss/tot*100,digits = 1)) %>%
+    mutate(txt = paste0(miss, " (", pct, "%)")) %>%
+    ungroup %>%
+    select(group, txt) %>%
     deframe
 }
 
@@ -224,6 +255,7 @@ dm_table <- tribble(
   "Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
   "Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
   "Body Mass Index (kg/m^2^)", "mean_sd", "vsbmi", list(digits = 0),
+  "Body Mass Index (kg/m^2^)", "median_iqr", "vsbmi", list(digits = 0),
   "Obese (BMI > 30 kg/m^2^), n(%)", "n_pct", "vsobese", list(level="Obese"),
   "Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
   "Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0), 
@@ -248,6 +280,8 @@ dm_table <- tribble(
   " Active TB, n(%)", "n_pct", "cc_tb", list(level = "Yes")
   
 )
+
+
 
 dm_table_f <- function(data, caption, header){
 dm_table %>%
