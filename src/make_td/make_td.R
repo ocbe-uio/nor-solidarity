@@ -34,9 +34,9 @@ write_rds(tdvs, "data/td/tdvs.rds")
 
 tdcc <- raw %>% 
   pick("cc") %>% 
-  labeliser(codelist = items) %>% 
   select(sitename, sitecode, subjectid,  starts_with("cc")) %>% 
-  select(-ends_with("cd")) 
+  select(-ends_with("cd")) %>% 
+  mutate(across(cc_card:cc_other, ~if_else(cc_known == "Yes", .x, factor("No", order = TRUE)))) %>%       labeliser(codelist = items)
 
 
 tdef <- raw %>% 
@@ -76,6 +76,12 @@ tdrc <- raw %>%
 
 tdlbb <- raw %>% 
   pick("lbb") %>% 
+  labeliser(codelist = items) %>% 
+  select(subjectid, starts_with("event"), starts_with("lb")) %>% 
+  select(-ends_with("cd"))
+
+tdlbh <- raw %>% 
+  pick("lbh") %>% 
   labeliser(codelist = items) %>% 
   select(subjectid, starts_with("event"), starts_with("lb")) %>% 
   select(-ends_with("cd"))
@@ -183,7 +189,13 @@ tddm <- raw %>%
   # Add baseline medications
   left_join(tdme %>%  select(-sitename, -sitecode), by = "subjectid") %>% 
   left_join(tdlbb %>% 
-              select(subjectid))
+              filter(eventid == "V00") %>% 
+              select(subjectid, lbferres,lbdimres1, lbastres, lbaltres, lbldres, lbcrpres), 
+            by = "subjectid") %>% 
+  left_join(tdlbh %>% 
+              filter(eventid == "V00") %>% 
+              select(subjectid, lbhbres, lbpcres, lbneures, lblymres, lbwbcres), 
+            by = "subjectid") 
   
   
 write_rds(tddm, "data/td/tddm.rds")
