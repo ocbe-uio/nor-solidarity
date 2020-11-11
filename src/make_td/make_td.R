@@ -72,15 +72,14 @@ tdrc <- raw %>%
   pick("rc") %>% 
   labeliser(codelist = items) %>% 
   select(subjectid, starts_with("event"), starts_with("rc")) %>% 
-  select(-ends_with("cd")) %>% 
-  full_join(tdvs %>% select(subjectid:eventid, vsox3mnt:vsprohrs), 
-            by = c("subjectid", "eventid", "eventdate")) %>%
-  mutate(rcair = if_else(is.na(rcair), vsair, rcair),
-         rcoxyter = ifelse(is.na(rcoxyter), vsoxyter, rcoxyter),
-         rcoxsat = if_else(is.na(rcoxsat), vsoxsat, rcoxsat),
-         rcrtroom = if_else(is.na(rcrtroom), vsrtroom, rcrtroom),
-         rclmin = if_else(is.na(rclmin), vslitmin, rclmin),
-         )
+  select(-ends_with("cd"))
+
+tdlbb <- raw %>% 
+  pick("lbb") %>% 
+  labeliser(codelist = items) %>% 
+  select(subjectid, starts_with("event"), starts_with("lb")) %>% 
+  select(-ends_with("cd"))
+
 
 
 ###############
@@ -182,7 +181,9 @@ tddm <- raw %>%
   mutate(sympdur = oaadm_h - oasympdt) %>% 
   labelled::set_variable_labels(sympdur = "Symptom duration at admission (days") %>% 
   # Add baseline medications
-  left_join(tdme %>%  select(-sitename, -sitecode), by = "subjectid")
+  left_join(tdme %>%  select(-sitename, -sitecode), by = "subjectid") %>% 
+  left_join(tdlbb %>% 
+              select(subjectid))
   
   
 write_rds(tddm, "data/td/tddm.rds")
