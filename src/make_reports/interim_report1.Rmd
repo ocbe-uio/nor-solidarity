@@ -229,6 +229,7 @@ dm_table <- tribble(
   "Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0), 
   "Mean Arterial Blood Pressure (mmHg)", "mean_sd", "vsmap", list(digits = 0),
   "Temperature (°C)", "mean_sd", "vstemp", list(digits = 1), 
+  "SOFA score", "mean_sd", "scsumsc", list(digits = 1),
   "Oxygen requirement (Litres O~2~ per min)", "mean_sd", "lito2min", list(digits = 1),
   "No information on oxygen (litres O~2~ per min)", "n_pct", "lito2min_reg", list(level = "No"),
   "**Comorbidities**", "empty", "", list(),

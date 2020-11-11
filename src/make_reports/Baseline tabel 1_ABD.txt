@@ -1,0 +1,36 @@
+Baseline tabell:
+Age
+Gender
+BMI
+Days of symptoms prior to admission
+Number of patients with SARS-CoV-2 antibodies in serum (IgG/IgM)
+Number of patients with SARS-CoV-2 detected in plasma at admission
+Temperature
+P/F-ratio above or beneath 26.6kPa
+SOFA-score (bare optional)
+Biokjemi
+o	Hb
+o	Lekocytter
+o	Neutrophils
+o	Lymphocytes
+o	Platelets
+o	CRP
+o	PCT
+o	Ferritin
+o	LD
+o	ASAT
+o	ALAT
+o	D-dimer
+o	eGFR
+Underlying diseases or risk factors
+o	Diabetes
+o	Chronic pulmonary disease
+o	Cardiovascular disease
+o	Smoking
+o	Hypertension
+o	Autoimmun diseases
+o	Malignancy 
+Medications
+o	Number of patients on corticosteroids at admission
+o	Other immunosuppressive drugs
+o	Number of patients on AT-II blockers/ACE-inhibitors at admission

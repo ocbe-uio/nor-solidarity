@@ -26,7 +26,7 @@ write_rds(tdsc, "data/td/tdsc.rds")
 tdvs <- raw %>% 
   pick("vs") %>% 
   labeliser(codelist = items) %>% 
-  select(sitename, sitecode, subjectid, eventdate, eventid, starts_with("vs")) %>% 
+  select(subjectid, eventdate, eventid, starts_with("vs")) %>% 
   select(-ends_with("cd")) %>% 
   mutate(vsobese = cut(vsbmi, breaks = c(-Inf, 30, Inf), label = c("Normal", "Obese"))) %>% 
   labelled::set_variable_labels(vsobese = "Obese (BMI > 30)?")
@@ -72,10 +72,15 @@ tdrc <- raw %>%
   pick("rc") %>% 
   labeliser(codelist = items) %>% 
   select(subjectid, starts_with("event"), starts_with("rc")) %>% 
-  select(-ends_with("cd"))
-
-
-
+  select(-ends_with("cd")) %>% 
+  full_join(tdvs %>% select(subjectid:eventid, vsox3mnt:vsprohrs), 
+            by = c("subjectid", "eventid", "eventdate")) %>%
+  mutate(rcair = if_else(is.na(rcair), vsair, rcair),
+         rcoxyter = ifelse(is.na(rcoxyter), vsoxyter, rcoxyter),
+         rcoxsat = if_else(is.na(rcoxsat), vsoxsat, rcoxsat),
+         rcrtroom = if_else(is.na(rcrtroom), vsrtroom, rcrtroom),
+         rclmin = if_else(is.na(rclmin), vslitmin, rclmin),
+         )
 
 
 ###############
