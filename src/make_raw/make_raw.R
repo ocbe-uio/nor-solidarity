@@ -4,10 +4,11 @@ library(glue)
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args)==0) {
-  export_name <- "ous_20201016_084109" #default export
+  export_name <- "ous_20201117_123041" #default export
 } else if (length(args) != 0) {
   export_name <- args[1]
 }
+
 
 
 export_folder <- glue("data/raw/{export_name}")

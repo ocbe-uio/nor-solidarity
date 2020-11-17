@@ -9,18 +9,18 @@ Temperature
 P/F-ratio above or beneath 26.6kPa
 SOFA-score (bare optional)
 Biokjemi
-o	Hb
-o	Lekocytter
-o	Neutrophils
-o	Lymphocytes
-o	Platelets
-o	CRP
+o	Hb x
+o	Lekocytter x
+o	Neutrophils x
+o	Lymphocytes x
+o	Platelets x
+o	CRP x
 o	PCT
-o	Ferritin
-o	LD
-o	ASAT
-o	ALAT
-o	D-dimer
+o	Ferritin x
+o	LD x
+o	ASAT x
+o	ALAT x
+o	D-dimer x
 o	eGFR
 Underlying diseases or risk factors
 o	Diabetes
@@ -31,6 +31,15 @@ o	Hypertension
 o	Autoimmun diseases
 o	Malignancy 
 Medications
-o	Number of patients on corticosteroids at admission
-o	Other immunosuppressive drugs
-o	Number of patients on AT-II blockers/ACE-inhibitors at admission
+o	Number of patients on corticosteroids at admission me9
+o	Other immunosuppressive drugs me10
+o	Number of patients on AT-II blockers/ACE-inhibitors at admission me1, me2
+
+
+C03 - diuretika, 
+C10 - statiner, 
+C07 - betablokkere, 
+C09 - ACE-hemmere/ arb, 
+C01 - hjerteterapi: glykosider, kardilaterende, antiarytmika, 
+C08 - kalsiumantagonister, 
+A10 - antidiabetika
