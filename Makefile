@@ -1,9 +1,9 @@
 
-VIEDOC_EXPORT_NAME = ous_20201016_084109
+VIEDOC_EXPORT_NAME = ous_20201117_123041
 DATE = $(shell echo $(VIEDOC_EXPORT_NAME) | sed 's/.*_\(....\)\(..\)\(..\)_.*/\1-\2-\3/')
 DMC_REPORT = $(DATE)_Nor-Solidarity_DMC_Report.docx
 RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
-TD = data/td/tddm.rds data/td/tdran.rds data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdvs.rds 
+TD = data/td/tddm.rds data/td/tdran.rds data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdvs.rds data/td/tdrc.rds
 AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds
 
 # Set this to FALSE when for the true results.  

@@ -90,64 +90,9 @@ if (pseudorand) {
 
 write_rds(adsl, "data/ad/adsl.rds")
 
-##################
-#Make adae
-#################
-
-tdae <- read_rds("data/td/tdae.rds")
-
-adae <- adsl %>% 
-  select(sitename, subjectid, dmicdat, age_calc, randt, rantrt) %>%
-  left_join(tdae, by =  c("sitename", "subjectid")) %>% 
-  labeliser() %>% 
-  mutate(anyae = if_else(is.na(aespid), 0, 1),
-         sae = if_else(is.na(aespid), 0, aesercd)
-  ) %>%  
-  group_by(subjectid) %>% 
-  mutate(n_ae = sum(anyae),
-         one_ae = n_ae == 1,
-         two_ae = n_ae == 2,
-         three_plus_ae = n_ae > 2,
-         anysae = max(sae)) %>% 
-  ungroup
-
-readr::write_rds(adae, "data/ad/adae.rds")
-
-##################
-# Make adeff
-##################
-
-
-adeff <- adsl %>% 
-  select(sitename, subjectid, dmicdat, age_calc, randt, rantrt, sex, sq_admis) %>%
-  left_join(pick(raw, "dph"), by = c("sitename", "subjectid") ) %>% 
-  select(-(siteseq:designversion)) %>% 
-  left_join(pick(raw, "eos"), by = c("sitename", "subjectid")) %>% 
-  select(-(siteseq:designversion)) %>% 
-  select(-ends_with("cd")) %>% 
-  labeliser() %>% 
-  mutate(outcome = case_when(
-    !is.na(dphdisc) ~ "Alive and discharged",
-    eosreas == "Death" ~ "Dead",
-    !is.na(eosreas) ~ "Withdrawn",
-    TRUE ~ "Ongoing"
-  )) %>% 
-  mutate(outcomedat = case_when(
-    !is.na(dphdisc) ~ dphad,
-    !is.na(eosreas) ~ eosdat,
-    TRUE ~ date(NA)
-  )) %>% 
-  mutate(outcome = factor(outcome, 
-                          levels = c("Alive and discharged",  "Withdrawn", "Ongoing","Dead"), 
-                          ordered = TRUE)) %>% 
-  group_by(subjectid) %>% 
-  arrange(subjectid, outcomedat) %>% 
-  filter(row_number() == 1) %>% 
-  ungroup
-
-write_rds(adeff, "data/ad/adeff.rds")
-
-
+################
+# Make the adex dataset for exposure to study treatment
+###############
 
 tdex <- read_rds("data/td/tdex.rds")
 
@@ -178,11 +123,12 @@ adex <- tdex %>%
     exstdt = min(if_else(exdose>0, exstdt, Inf)), 
     exendt = max(if_else(exdose > 0, exendt, -Inf)),
     extrtdur = exendt - exstdt,
-    exmindose = min(exdose),
-    exmaxdose = max(exdose),
-    extotdose = sum(exdose),
-    exdisc = max(exdisc), .groups = "drop_last"
-    ) %>% 
+    exndose = sum(exdose > 0, na.rm = TRUE),
+    exmindose = min(exdose, na.rm = TRUE),
+    exmaxdose = max(exdose, na.rm = TRUE),
+    extotdose = sum(exdose, na.rm = TRUE),
+    exdisc = max(exdisc, na.rm = TRUE), .groups = "drop_last"
+  ) %>% 
   labelled::set_variable_labels(
     extrt = "Treatment administered",
     exstdt = "Treatment start date",
@@ -198,6 +144,73 @@ adex <- tdex %>%
 adex <- adsl %>%
   left_join(adex, by =  "subjectid")
 
+write_rds(adex, "data/ad/adex.rds")
+
+
+
+##################
+#Make adae
+#################
+
+tdae <- read_rds("data/td/tdae.rds")
+
+adae <- adsl %>% 
+#  select(sitename, subjectid, dmicdat, age_calc, randt, rantrt) %>%
+  left_join(tdae, by =  c("subjectid")) %>% 
+  labeliser() %>% 
+  mutate(anyae = if_else(is.na(aespid), 0, 1),
+         sae = if_else(is.na(aespid), 0, aesercd)
+  ) %>%  
+  group_by(subjectid) %>% 
+  mutate(n_ae = sum(anyae),
+         one_ae = n_ae == 1,
+         two_ae = n_ae == 2,
+         three_plus_ae = n_ae > 2,
+         anysae = max(sae)) %>% 
+  ungroup
+
+readr::write_rds(adae, "data/ad/adae.rds")
+
+##################
+# Make adeff
+##################
+
+
+adeff <- tdds %>% 
+  mutate(survtime = if_else(!is.na(eosdtdat), eosdtdat - randt, eosdat - randt),
+         survtime = if_else(!is.na(survtime), survtime, dphendt - randt),
+         survcens = if_else(is.na(eosdtdat), "Yes", "No")
+         ) %>% 
+  mutate(survtime28 = if_else(survtime <= 28, survtime, 28),
+         
+  
+# 
+# 
+#   mutate(outcome = case_when(
+#     !is.na(dphdisc) ~ "Alive and discharged",
+#     eosreas == "Death" ~ "Dead",
+#     !is.na(eosreas) ~ "Withdrawn",
+#     TRUE ~ "Ongoing"
+#   )) %>% 
+#   mutate(outcomedat = case_when(
+#     !is.na(dphdisc) ~ dphad,
+#     !is.na(eosreas) ~ eosdat,
+#     TRUE ~ date(NA)
+#   )) %>% 
+#   mutate(outcome = factor(outcome, 
+#                           levels = c("Alive and discharged",  "Withdrawn", "Ongoing","Dead"), 
+#                           ordered = TRUE)) %>% 
+#   group_by(subjectid) %>% 
+#   arrange(subjectid, outcomedat) %>% 
+#   filter(row_number() == 1) %>% 
+#   ungroup
+# 
+# 
+
+  
+
+write_rds(adeff, "data/ad/adeff.rds")
+
 
 # 
 # lungimaging <- adsl %>%
@@ -210,43 +223,6 @@ adex <- adsl %>%
 #   select(subjectid, diinfil, dipatchy)
 # 
 # 
-
-
-# adsl %>%
-#   select(sitename, sitecode, subjectid, dmicdat, dmage, randt, rantrt) %>%
-#   left_join(tdex, by = c("sitename", "sitecode", "subjectid")) %>%
-#   group_by(subjectid, rantrt) %>%
-#   summarise(totdose_hcq = sum(dabcno),
-#             n_dose_hcq = sum(dabcno > 0),
-#             n_desc_hcq = sum(dadiyn_c =="Yes"),
-#             totdose_rem = sum(drremds),
-#             n_dose_rem = sum(drremds >0),
-#             n_desc_rem = sum(dardisc == "Yes"),
-#             .groups = "drop_last") %>%
-#   filter(rantrt != "Standard of care (SOC)") %>%
-#   mutate(totdose = if_else(rantrt == "Hydroxychloroquine + SOC", totdose_hcq, totdose_rem),
-#          n_dose = if_else(rantrt == "Hydroxychloroquine + SOC", n_dose_hcq, n_dose_rem),
-#          n_desc = if_else(rantrt == "Hydroxychloroquine + SOC", n_desc_hcq, n_desc_rem),
-#          any_desc = n_desc > 0) %>%
-#   group_by(rantrt) %>%
-#   summarise(median_totdose = quantile(totdose, 0.5, na.rm = TRUE),
-#             q1_totdose = quantile(totdose, 0.25, na.rm = TRUE),
-#             q3_totdose = quantile(totdose, 0.75, na.rm = TRUE),
-#             median_no_doses = median(n_dose,0.5,  na.rm = TRUE),
-#             q1_no_doses = quantile(n_dose, 0.25, na.rm = TRUE),
-#             q3_no_doses = quantile(n_dose, 0.75, na.rm = TRUE),
-#             n_anydesc = sum(any_desc, na.rm = TRUE),
-#             n = n(),
-#             .groups = "drop_last") %>%
-#   mutate(`Total dose, median (IQR), mg` = glue("{median_totdose} ({q1_totdose} - {q3_totdose})"),
-#          `Days with treatment, median (IQR)` = glue("{median_no_doses} ({q1_no_doses} - {q3_no_doses})"),
-#          `Patients with any treatment discrepencies, n (%)` = glue("{n_anydesc} ({round(100*n_anydesc/n, digits = 1)}%)")) %>%
-#   select(-(median_totdose:n)) %>%
-#   pivot_longer(-rantrt) %>%
-#   pivot_wider(names_from = rantrt, values_from = value) %>%
-#   rename(Parameter = name) %>%
-#   knitr::kable(booktabs = TRUE,
-#                caption = "Exposure to study treatment")
 
 
 
