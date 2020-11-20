@@ -38,7 +38,7 @@ tmp <- tdsq %>%
   ungroup
 
 adsl <- tdds %>% 
-  left_join(tddm %>% select(subjectid, age_calc, sq_admis, sex, dmini), by = "subjectid") %>% 
+  left_join(tddm %>% select(subjectid, age_calc, sex, dmini), by = "subjectid") %>% 
   left_join(tmp, by = "subjectid") %>%
   left_join(tdran %>% select(-randt), by= "subjectid") %>% 
   mutate(enrolled= if_else(!is.na(dmicdat), "Yes", "No")) %>% 
@@ -180,8 +180,8 @@ adeff <- tdds %>%
   mutate(survtime = if_else(!is.na(eosdtdat), eosdtdat - randt, eosdat - randt),
          survtime = if_else(!is.na(survtime), survtime, dphendt - randt),
          survcens = if_else(is.na(eosdtdat), "Yes", "No")
-         ) %>% 
-  mutate(survtime28 = if_else(survtime <= 28, survtime, 28),
+         ) #%>% 
+  #mutate(survtime28 = if_else(survtime <= 28, survtime, 28),
          
   
 # 

@@ -24,7 +24,13 @@ dmc_report: results/dmc/$(DMC_REPORT)
 data/raw/raw.rds:  $(RAW_CSV) src/make_raw/make_raw.R src/external/functions.R
 	Rscript src/make_raw/make_raw.R $(VIEDOC_EXPORT_NAME)
 
-
+data/td/rdran.rds: data/raw/raw.rds src/external/functions.R src/make_td/make_tdran.R
+	Rscript src/make_td/make_tdran.R
+	
+data/td/rdrc.rds data/td/tdvs.rds: data/raw/raw.rds src/external/functions.R src/make_td/make_tdrcvs.R
+	Rscript src/make_td/make_tdrcvs.R
+	
+	
 $(TD): data/raw/raw.rds src/external/functions.R src/make_td/make_td.R
 	Rscript src/make_td/make_td.R
 	

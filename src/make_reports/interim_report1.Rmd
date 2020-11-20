@@ -243,7 +243,7 @@ dm_table <- tribble(
   "AT-II blockers", "n_pct", "me2", list(level = "Yes")
 )
 
-labtable <- tddm %>% 
+labtable <- addm %>% 
   select(lbferres:lbwbcres) %>% 
   var_label(unlist = TRUE)  
   
@@ -273,15 +273,11 @@ table_temp %>%
 }
 
 
-addm_tot <- adsl %>% select(-age_calc, -sq_admis, -sex) %>% 
-  left_join(tddm, by ="subjectid") %>% filter(fas == "Yes")
-addm_hcq <- adsl  %>% select(-age_calc, -sq_admis, -sex) %>% 
-  left_join(tddm, by ="subjectid") %>% filter(fas_hcq == "Yes")
-addm_rem <- adsl  %>% select(-age_calc, -sq_admis, -sex) %>% 
-  left_join(tddm, by ="subjectid") %>% filter(fas_rem == "Yes")
+addm_hcq <- addm  %>% filter(fas_hcq == "Yes")
+addm_rem <- addm  %>% filter(fas_rem == "Yes")
 
 
-dm_table_f(addm_tot, dm_table, "Demographics, all arms (FAS)", header_tot)
+dm_table_f(addm, dm_table, "Demographics, all arms (FAS)", header_tot)
 
 dm_table_f(addm_hcq, dm_table, "Demographics, HCQ (FAS)", header_hcq)
 
@@ -291,7 +287,7 @@ dm_table_f(addm_rem, dm_table, "Demographics, Remdesivir (FAS)", header_rem)
 missing_table <- dm_table %>% 
   mutate(f = if_else(var == "", "empty","missing_f")) 
 
-dm_table_f(addm_tot, missing_table, "Missing values, all arms (FAS)", header_tot)
+dm_table_f(addm, missing_table, "Missing values, all arms (FAS)", header_tot)
 
 
 ```
