@@ -1,3 +1,14 @@
+###########################
+# Make miscelaneous tabulation datasets
+# Input from raw: sq, sc, dhp, oa, lbb, lbh
+# Input from td:  tdran
+# Output: tdsq, tdsc, tdex, tdds, tdcm, tdae
+##########################
+
+
+
+
+
 library(tidyverse)
 library(lubridate)
 library(glue)
@@ -6,6 +17,7 @@ source("src/external/functions.R")
 
 
 raw <- readr::read_rds("data/raw/raw.rds")
+tdran <- readr::read_rds("data/td/tdran.rds")
 items <- raw %>% pick("items")
 
 
@@ -34,6 +46,12 @@ tddph <- raw %>%
   select(subjectid, dphstdt, dphendt) %>% 
   ungroup
 
+
+tdoa <- raw %>% 
+  pick("oa") %>% 
+  labeliser(codelist = items) %>% 
+  select(subjectid,  starts_with("oa")) %>% 
+  select(-ends_with("cd"))
 
 
 tdlbb <- raw %>% 
@@ -68,21 +86,11 @@ tdex <- raw %>% pick("da") %>%
 write_rds(tdex, "data/td/tdex.rds")
 
 
-tdcm <- raw %>% pick("cm") %>% 
-  left_join(pick(raw,"atc_without_ddd")) %>% 
-  select(-(eventid:designversion), -(siteseq:subjectseq)) %>% 
-  labeliser() 
-
-
-
-
-
 tdds <- raw %>% 
   pick("eos") %>% 
   labeliser(codelist = items) %>% 
   select(subjectid, starts_with("eos")) %>% 
   select( -(eosaechk:eosaeyes1cd), -eosyncd)
-
 
 tdds <- tddm %>% 
   select(subjectid, dmicdat) %>% 
@@ -92,6 +100,27 @@ tdds <- tddm %>%
   left_join(tddph, by = "subjectid")
 
 write_rds(tdds, "data/td/tdds.rds")
+
+tdcm <- raw %>% pick("cm") %>% 
+  left_join(pick(raw,"atc_without_ddd")) %>% 
+  select(-(eventid:designversion), -(siteseq:subjectseq)) %>% 
+  select(-ends_with("cd")) %>% 
+  labeliser() 
+
+tdcm <- tdds %>% 
+  select(subjectid, randt) %>% 
+  filter(!is.na(randt)) %>% 
+  right_join(tdcm, by = "subjectid") %>% 
+  mutate(cmstdat = ymd(str_replace_all(cmstdat, "-NK", "-01"))) %>% 
+  mutate(cmbl = if_else(cmstdat <= randt, "Yes", "No", "Yes"),
+         cmprior = if_else(cmstdat < randt, "Yes", "No", "Yes")) %>%  
+  labeliser() %>% 
+  set_variable_labels(cmbl = "Start on or prior to baseline",
+                      cmprior = "Start prior to baseline") %>% 
+  arrange(subjectid, cmspid)
+
+
+write_rds(tdcm, "data/td/tdcm.rds")
 
 ###################################################
 # Make tdae

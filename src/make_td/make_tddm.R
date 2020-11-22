@@ -57,6 +57,24 @@ tdme <- raw %>%
   select( subjectid,  starts_with("me")) %>% 
   select(-ends_with("cd"))
 
+# Select out these from the CM dataset
+# C03 - diuretika, 
+# C10 - statiner, 
+# C07 - betablokkere, 
+# C09 - ACE-hemmere/ arb, 
+# C01 - hjerteterapi: glykosider, kardilaterende, antiarytmika, 
+# C08 - kalsiumantagonister, 
+# A10 - antidiabetika
+
+tdcm_bl <- tdcm %>% 
+  filter(cmbl == "Yes" & l2code %in% c("C03", "C10", "C07", "C09",
+                                      "C01", "C08", "A10")) %>% 
+  select(subjectid, l2code) %>% 
+  group_by(subjectid, l2code) %>% 
+  summarise(n = n(), .groups = "drop") %>% 
+  pivot_wider(id_cols = subjectid, names_from = l2code, values_from = n) %>%
+  arrange(subjectid)
+
 
 tddm <- raw %>% 
   pick("dm") %>% 
@@ -77,7 +95,11 @@ tddm <- raw %>%
   labelled::set_variable_labels(sympdur = "Symptom duration at admission (days") %>% 
   select(-oaadm_h, -oasympdt) %>% 
   # Add baseline medications
-  left_join(tdme, by = "subjectid") 
+  left_join(tdme, by = "subjectid") %>% 
+  # Add baseline medication from the CM dataset
+  left_join(tdcm_bl, by = "subjectid") %>% 
+  mutate(across(C10:C01, ~ if_else(!is.na(.x), "Yes", "No"))) 
+  
 
 
 write_rds(tddm, "data/td/tddm.rds")

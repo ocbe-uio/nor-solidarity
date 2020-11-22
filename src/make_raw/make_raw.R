@@ -4,7 +4,7 @@ library(glue)
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args)==0) {
-  export_name <- "ous_20201117_123041" #default export
+  export_name <- "ous_20201121_154631" #default export
 } else if (length(args) != 0) {
   export_name <- args[1]
 }
