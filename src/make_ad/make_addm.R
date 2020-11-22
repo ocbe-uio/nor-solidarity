@@ -16,6 +16,9 @@ source("src/external/functions.R")
 tdsq <- readr::read_rds("data/td/tdsq.rds")
 tdsc <- readr::read_rds("data/td/tdsc.rds")
 tdlb <- readr::read_rds("data/td/tdlb.rds")
+tddm <- readr::read_rds("data/td/tddm.rds")
+tdcm <- readr::read_rds("data/td/tdcm.rds")
+
 
 addm <- adsl %>% select(-age_calc,  -sex) %>% 
   left_join(tddm, by ="subjectid") %>% filter(fas == "Yes") %>% 
