@@ -45,7 +45,7 @@ labeliser <- function(data, codelist = items){
 }
 
 pick <- function(db, name) {
-  db %>% filter(id == name) %>% purrr::pluck("data",1)
+  db %>% dplyr::filter(id == name) %>% purrr::pluck("data",1)
 }
 
 

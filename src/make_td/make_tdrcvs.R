@@ -5,7 +5,11 @@
 # Output: tdrc, tdvs
 #########################################
 
+library(tidyverse)
 
+source("src/external/functions.R")
+raw <- readr::read_rds("data/raw/raw.rds")
+items <- raw %>% pick("items")
 
 tdrc <- raw %>% 
   pick("rc") %>% 
@@ -141,6 +145,20 @@ tdrc <- tdrc %>%
   select( -ends_with("cd"), -starts_with("vs"), -rcrtroom, -(rcesfio2:rcrtoxy), -(rchigh:rcniv)) %>% 
   rename(rcoxytercd = rcoxytercd_) %>% 
   relocate(rcoxytercd, .after = rcoxytercd)
+
+#######################
+# Compute the WHO progression score (0-10) and corresponding disease state
+######################
+
+tdrc <-tdrc %>% 
+  mutate(rcwhocps = case_when(
+    rcoxytercd == 0           ~ 4,
+    rcoxytercd %in% c(1, 2, 3) ~ 5,
+    rcoxytercd %in% c(4, 5, 6) ~ 6,
+    rcoxytercd == 7 & 
+    
+  )
+  )
 
 write_rds(tdrc, "data/td/tdrc.rds")
 

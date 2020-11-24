@@ -6,9 +6,6 @@
 ##########################
 
 
-
-
-
 library(tidyverse)
 library(lubridate)
 library(glue)
@@ -92,7 +89,8 @@ tdds <- raw %>%
   select(subjectid, starts_with("eos")) %>% 
   select( -(eosaechk:eosaeyes1cd), -eosyncd)
 
-tdds <- tddm %>% 
+tdds <- raw %>%
+  pick("dm") %>% 
   select(subjectid, dmicdat) %>% 
   left_join(tdoa, by = "subjectid") %>% 
   left_join(select(tdran, subjectid, randt), by="subjectid") %>% 
@@ -115,7 +113,7 @@ tdcm <- tdds %>%
   mutate(cmbl = if_else(cmstdat <= randt, "Yes", "No", "Yes"),
          cmprior = if_else(cmstdat < randt, "Yes", "No", "Yes")) %>%  
   labeliser() %>% 
-  set_variable_labels(cmbl = "Start on or prior to baseline",
+  labelled::set_variable_labels(cmbl = "Start on or prior to baseline",
                       cmprior = "Start prior to baseline") %>% 
   arrange(subjectid, cmspid)
 

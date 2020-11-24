@@ -4,11 +4,11 @@ DATE = $(shell echo $(VIEDOC_EXPORT_NAME) | sed 's/.*_\(....\)\(..\)\(..\)_.*/\1
 DMC_REPORT = $(DATE)_Nor-Solidarity_DMC_Report.docx
 RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
 TDMISC = data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdcm.rds data/td/tdds.rds
-TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/rdrc.rds data/td/tdvs.rds
-AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds
+TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds
+AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds data/ad/adex.rds data/ad/addm.rds
 
 # Set this to FALSE when for the true results.  
-PSEUDORANDOM = TRUE 
+PSEUDORANDOM = FALSE 
 
 .PHONY: all td ad raw dmc_report
 all: td ad raw 
@@ -30,14 +30,24 @@ $(TDMISC): data/raw/raw.rds data/td/tdran.rds src/external/functions.R src/make_
 data/td/tddm.rds: data/raw/raw.rds data/td/tdds.rds src/external/functions.R src/make_td/make_tddm.R
 	Rscript src/make_td/make_tddm.R
 
-data/td/rdrc.rds data/td/tdvs.rds: data/raw/raw.rds src/external/functions.R src/make_td/make_tdrcvs.R
+data/td/tdrc.rds data/td/tdvs.rds: data/raw/raw.rds src/external/functions.R src/make_td/make_tdrcvs.R
 	Rscript src/make_td/make_tdrcvs.R
 	
 data/ad/adsl.rds: data/raw/raw.rds src/external/functions.R data/td/tddm.rds data/td/tdran.rds data/td/tdsq.rds src/make_ad/make_adsl.R
-  Rscript src/make_ad/make_adsl.R $(PSEUDORANDOM)
-  
+	Rscript src/make_ad/make_adsl.R $(PSEUDORANDOM)
+	
+data/ad/addm.rds: $(TD) data/ad/adsl.rds src/external/functions.R src/make_ad/make_addm.R
+	Rscript src/make_ad/make_addm.R
+	
 data/ad/adex.rds: data/td/tdex.rds data/ad/adsl.rds src/make_ad/make_adex.R
-  Rscript src/make_ad/make_adex.R
+	Rscript src/make_ad/make_adex.R
+  
+data/ad/adae.rds: data/td/tdae.rds data/ad/adsl.rds src/make_ad/make_adae.R
+	Rscript src/make_ad/make_adae.R
+  
+data/ad/adeff.rds: data/td/tdds.rds data/ad/adsl.rds src/make_ad/make_adeff.R
+	Rscript src/make_ad/make_adeff.R
+
 
 #$(AD): $(TD) data/raw/raw.rds src/external/functions.R src/make_ad/make_ad.R
 #	Rscript src/make_ad/make_ad.R $(PSEUDORANDOM)
