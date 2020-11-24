@@ -13,6 +13,7 @@ source("src/external/functions.R")
 
 raw <- readr::read_rds("data/raw/raw.rds")
 tdds <- readr::read_rds("data/td/tdds.rds")
+tdcm <- readr::read_rds("data/td/tdcm.rds")
 items <- raw %>% pick("items")
 
 
