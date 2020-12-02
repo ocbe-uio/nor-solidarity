@@ -6,7 +6,6 @@ source("src/external/functions.R")
 # Input from raw: ran, ran123, ran13, who
 ##############
 
-
 raw <- readr::read_rds("data/raw/raw.rds")
 items <- raw %>% pick("items")
 
@@ -35,7 +34,7 @@ tdran <- bind_rows(pick(raw,"ran"), pick(raw,"ran123"), pick(raw,"ran13"), pick(
   labeliser(codelist = items) %>%
   labelled::set_variable_labels(ranavail_rem = "Remdesivir available?",
                                 ranavail_hcq = "Hydroxychloroquine available?") %>%
-  arrange(randt)
+  arrange(subjectid)
 
 
 

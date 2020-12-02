@@ -33,9 +33,10 @@ eccosubj <- readxl::read_excel("data/raw/misc/20201120 Viedoc_ECCO_id.xlsx") %>%
 
 eccobl <- eccosubj %>% 
   left_join(addm, by = "subjectid") %>% 
-  select(subjectid, rantrt, fas, fas_rem, fas_hcq, sex, age_calc, vsbmi, cc_eversmoker, vssys, vsdia,
-         cc_ht, cc_diab, cc_card, me1, me2, diuretics = C03, antidiabetics = 
-           A10, statins = C10, betablockers = C07, C01, C08, lbtrores, lbtrotyp, lbbnpres)
+  select(subjectid, rantrt, fas, fas_rem, fas_hcq, sex, age_calc, vsheight, vsweight, vsbmi, sq_admis, 
+         cc_eversmoker, vssys, vsdia, cc_ht, cc_diab, cc_card, me1, me2, diuretics = C03, 
+         antidiabetics = A10, statins = C10, betablockers = C07, C01, C08, lbtrores, lbtrotyp, 
+         lbbnpres, lbcreres, lbcrpres, lbegfrc, lbegfrm)
 
 haven::write_sav(eccobl, "data/work/eccobl.sav")  
 

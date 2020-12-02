@@ -83,28 +83,37 @@ tdrc <- tdrc %>%
   mutate(
     rcpo2 = case_when(
       !is.na(rcpo2) ~ rcpo2,
-      rcoxsat < 80  ~ 5 ,
-      rcoxsat == 80 ~ 5.87 ,
-      rcoxsat == 81 ~ 6.0 ,
-      rcoxsat == 82 ~ 6.13 ,
-      rcoxsat == 83 ~ 6.27 ,
-      rcoxsat == 84 ~ 6.53 ,
-      rcoxsat == 85 ~ 6.67 ,
-      rcoxsat == 86 ~ 6.93 ,
-      rcoxsat == 87 ~ 7.07 ,
-      rcoxsat == 88 ~ 7.33 ,
-      rcoxsat == 89 ~ 7.60 ,
-      rcoxsat == 90 ~ 8.0 ,
-      rcoxsat == 91 ~ 8.27 ,
-      rcoxsat == 92 ~ 8.67 ,
-      rcoxsat == 93 ~ 9.20 ,
-      rcoxsat == 94 ~ 9.73 ,
-      rcoxsat == 95 ~ 10.53 ,
-      rcoxsat == 96 ~ 11.47 ,
-      rcoxsat == 97 ~ 12.8 ,
-      rcoxsat == 98 ~ 14.93 ,
-      rcoxsat == 99 ~ 15.0 ,
-      rcoxsat == 100 ~ 15.1 ,
+      rcoxsat == 100 ~ 15.00,
+      rcoxsat == 99 ~ 14.93,
+      rcoxsat == 98 ~ 13.87,
+      rcoxsat == 97 ~ 12.13,
+      rcoxsat == 96 ~ 10.93,
+      rcoxsat == 95 ~ 10.13,
+      rcoxsat == 94 ~ 9.47,
+      rcoxsat == 93 ~ 8.93,
+      rcoxsat == 92 ~ 8.53,
+      rcoxsat == 91 ~ 8.13,
+      rcoxsat == 90 ~ 7.87,
+      rcoxsat == 89 ~ 7.60,
+      rcoxsat == 88 ~ 7.33,
+      rcoxsat == 87 ~ 7.07,
+      rcoxsat == 86 ~ 6.80,
+      rcoxsat == 85 ~ 6.67,
+      rcoxsat == 84 ~ 6.53,
+      rcoxsat == 83 ~ 6.27,
+      rcoxsat == 82 ~ 6.13,
+      rcoxsat == 81 ~ 6.00,
+      rcoxsat == 80 ~ 5.87,
+      rcoxsat == 79 ~ 5.73,
+      rcoxsat == 78 ~ 5.60,
+      rcoxsat == 77 ~ 5.60,
+      rcoxsat == 76 ~ 5.47,
+      rcoxsat == 75 ~ 5.33,
+      rcoxsat == 74 ~ 5.20,
+      rcoxsat == 73 ~ 5.20,
+      rcoxsat == 72 ~ 5.07,
+      rcoxsat == 71 ~ 4.93,
+      rcoxsat == 70 ~ 4.93,
       is.na(rcoxsat) ~ NA_real_,
       TRUE ~ NA_real_
     ),
@@ -139,7 +148,6 @@ tdrc <- tdrc %>%
   mutate(rcratio = round(rcpo2 / rcfio2 * 100, 1) ) %>% 
   mutate(rcprone = if_else(!is.na(rcprone), rcprone, vsprone), 
          rcprohrs = if_else(!is.na(rcprohrs), rcprohrs, vsprohrs)) %>% 
-  arrange(subjectid, eventdate) %>% 
   labeliser() %>% 
   rename(rcoxytercd_ = rcoxytercd) %>% 
   select( -ends_with("cd"), -starts_with("vs"), -rcrtroom, -(rcesfio2:rcrtoxy), -(rchigh:rcniv)) %>% 
@@ -151,20 +159,30 @@ tdrc <- tdrc %>%
 ######################
 
 tdrc <-tdrc %>% 
-  mutate(rcwhocps = case_when(
-    rcoxytercd == 0           ~ 4,
-    rcoxytercd %in% c(1, 2, 3) ~ 5,
-    rcoxytercd %in% c(4, 5, 6) ~ 6,
-    rcoxytercd == 7 & 
-    
-  )
-  )
+  mutate(
+    rcwhocps = case_when(
+      rcoxytercd == 0           ~ 4,
+      rcoxytercd %in% c(1, 2, 3) ~ 5,
+      rcoxytercd %in% c(4, 5, 6) ~ 6,
+      rcoxytercd == 7 & rcratio >= 20 ~ 7,
+      rcoxytercd == 7 & rcratio < 20 ~ 8,
+      TRUE                      ~ NA_real_   
+    ),
+    rcwhostate = case_when(
+      rcwhocps %in% c(4, 5) ~ "Moderate",
+      rcwhocps %in% c(6, 7, 8) ~ "Severe",
+      TRUE ~ NA_character_
+    ),
+    rcwhostate = factor(rcwhostate, levels = c("Moderate", "Severe"), ordered = TRUE)
+  ) %>% 
+  arrange(subjectid, eventdate) 
 
 write_rds(tdrc, "data/td/tdrc.rds")
 
 
 tdvs <- tdvs %>% select(-(vsox3mnt:vsprohrs)) %>% 
-  select(-ends_with("cd")) 
+  select(-ends_with("cd")) %>% 
+  arrange(subjectid, eventdate)
 
 write_rds(tdvs, "data/td/tdvs.rds")
 

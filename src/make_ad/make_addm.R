@@ -43,7 +43,8 @@ addm <- adsl %>% select(-age_calc,  -sex) %>%
   left_join(tdlb %>% 
               filter(eventid == "V00") %>% 
               select(subjectid, lbferres, lbdimres1, lbastres, lbaltres, lbldres, lbcrpres, lbprores,
-                     lbhbres, lbpcres, lbneures, lblymres, lbwbcres, lbtrores, lbtrotyp, lbbnpres), 
+                     lbhbres, lbpcres, lbneures, lblymres, lbwbcres, lbtrores, lbtrotyp, lbbnpres, 
+                     lbcreres, lbcrpres, lbegfrc, lbegfrm), 
             by = "subjectid")  
 
 

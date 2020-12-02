@@ -99,7 +99,8 @@ tddm <- raw %>%
   left_join(tdme, by = "subjectid") %>% 
   # Add baseline medication from the CM dataset
   left_join(tdcm_bl, by = "subjectid") %>% 
-  mutate(across(C10:C01, ~ if_else(!is.na(.x), "Yes", "No"))) 
+  mutate(across(C10:C01, ~ if_else(!is.na(.x), "Yes", "No"))) %>% 
+  arrange(subjectid, eventdate) 
   
 
 
