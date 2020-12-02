@@ -8,7 +8,7 @@ TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.
 AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds data/ad/adex.rds data/ad/addm.rds
 
 # Set this to FALSE when for the true results.  
-PSEUDORANDOM = FALSE 
+PSEUDORANDOM = FALSE
 
 .PHONY: all td ad raw dmc_report
 all: td ad raw 
@@ -29,6 +29,9 @@ $(TDMISC): data/raw/raw.rds data/td/tdran.rds src/external/functions.R src/make_
 
 data/td/tddm.rds: data/raw/raw.rds data/td/tdds.rds src/external/functions.R src/make_td/make_tddm.R
 	Rscript src/make_td/make_tddm.R
+	
+data/td/tdlb.rds: data/raw/raw.rds data/td/tddm.rds src/external/functions.R src/make_td/make_tdlb.R
+	Rscript src/make_td/make_tdlb.R
 
 data/td/tdrc.rds data/td/tdvs.rds: data/raw/raw.rds src/external/functions.R src/make_td/make_tdrcvs.R
 	Rscript src/make_td/make_tdrcvs.R

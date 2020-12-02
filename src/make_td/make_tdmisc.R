@@ -22,14 +22,17 @@ tdsq <- raw %>%
   pick("sq") %>% 
   labeliser(codelist = items) %>% 
   select(sitename, sitecode, subjectid, eventdate, eventid, starts_with("sq")) %>% 
-  select(-ends_with("cd"), -(sqegfr:sqaeyes1))  
+  select(-ends_with("cd"), -(sqegfr:sqaeyes1))  %>% 
+  mutate(sq_mort = if_else(!is.na(sq_mort), sq_mort, ordered("Alive"))) %>% 
+  arrange(subjectid, eventdate) 
 write_rds(tdsq, "data/td/tdsq.rds")
 
 tdsc <- raw %>% 
   pick("sc") %>% 
   labeliser(codelist = items) %>% 
   select(sitename, sitecode, subjectid, eventdate, eventid, starts_with("sc")) %>% 
-  select(-ends_with("cd"))
+  select(-ends_with("cd")) %>% 
+  arrange(subjectid, eventdate) 
 write_rds(tdsc, "data/td/tdsc.rds")
 
 
@@ -51,24 +54,6 @@ tdoa <- raw %>%
   select(-ends_with("cd"))
 
 
-tdlbb <- raw %>% 
-  pick("lbb") %>% 
-  labeliser(codelist = items) %>% 
-  select(subjectid, eventid, eventdate, starts_with("lb")) %>% 
-  select(-ends_with("cd"))
-
-tdlbh <- raw %>% 
-  pick("lbh") %>% 
-  labeliser(codelist = items) %>% 
-  select(subjectid, eventid, eventdate, starts_with("lb")) %>% 
-  select(-ends_with("cd"))
-
-tdlb <-tdlbb %>% 
-  full_join(tdlbh, by = c("subjectid", "eventid", "eventdate"))
-
-write_rds(tdlb, "data/td/tdlb.rds")
-
-
 #########################################
 # Make tdex for study treatment exposure
 ########################################
@@ -78,7 +63,8 @@ tdex <- raw %>% pick("da") %>%
   full_join(pick(raw,"dr")) %>%   
   select(subjectid, starts_with("event"), starts_with("da"), starts_with("dr")) %>% 
   select(-ends_with("cd")) %>% 
-  labeliser(codelist = items) 
+  labeliser(codelist = items) %>% 
+  arrange(subjectid, eventdate) 
 
 write_rds(tdex, "data/td/tdex.rds")
 
@@ -95,7 +81,8 @@ tdds <- raw %>%
   left_join(tdoa, by = "subjectid") %>% 
   left_join(select(tdran, subjectid, randt), by="subjectid") %>% 
   left_join(tdds, by = "subjectid") %>% 
-  left_join(tddph, by = "subjectid")
+  left_join(tddph, by = "subjectid") %>% 
+  arrange(subjectid) 
 
 write_rds(tdds, "data/td/tdds.rds")
 
@@ -115,7 +102,7 @@ tdcm <- tdds %>%
   labeliser() %>% 
   labelled::set_variable_labels(cmbl = "Start on or prior to baseline",
                       cmprior = "Start prior to baseline") %>% 
-  arrange(subjectid, cmspid)
+  arrange(subjectid, cmspid) 
 
 
 write_rds(tdcm, "data/td/tdcm.rds")
@@ -128,8 +115,8 @@ write_rds(tdcm, "data/td/tdcm.rds")
 tdae <- raw %>% pick("ae") %>% 
   left_join(pick(raw,"meddra")) %>% 
   select(-(eventid:designversion), -(siteseq:subjectseq)) %>% 
-  labeliser()
-
+  labeliser() %>% 
+  arrange(subjectid, aespid) 
 write_rds(tdae, "data/td/tdae.rds")
 
 
