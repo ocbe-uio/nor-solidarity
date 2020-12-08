@@ -17,7 +17,6 @@ raw <- readr::read_rds("data/raw/raw.rds")
 tdran <- readr::read_rds("data/td/tdran.rds")
 items <- raw %>% pick("items")
 
-
 tdsq <- raw %>% 
   pick("sq") %>% 
   labeliser(codelist = items) %>% 
@@ -77,7 +76,7 @@ tdds <- raw %>%
 
 tdds <- raw %>%
   pick("dm") %>% 
-  select(subjectid, dmicdat) %>% 
+  select(subjectid, sitename, dmicdat) %>% 
   left_join(tdoa, by = "subjectid") %>% 
   left_join(select(tdran, subjectid, randt), by="subjectid") %>% 
   left_join(tdds, by = "subjectid") %>% 

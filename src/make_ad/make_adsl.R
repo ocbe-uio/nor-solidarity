@@ -67,6 +67,7 @@ adsl <- tdds %>% select(-(oasympdt:oacodiag11)) %>%
                                 fas_rem = "Included in FAS with remdesivir available?",
                                 fas_hcq = "Included in FAS with HCQ available?") %>% 
   select(-tmp2, -(eosyn:eosdtdat)) %>% 
+  filter(fas == "Yes") %>% 
   arrange(subjectid)
 
 ###############
@@ -79,7 +80,7 @@ if (pseudorand) {
   varlabels <- labelled::var_label(adsl, unlist = TRUE)
   
   adsl2 <- adsl %>%
-    select(subjectid, rantrt:fas_hcq ) %>% 
+    select(subjectid, rantrt:fas_hcq) %>% 
     group_by(subjectid) %>% 
     nest() %>% 
     ungroup() %>% 
@@ -88,7 +89,8 @@ if (pseudorand) {
   
   adsl <- adsl %>% 
     select(-(rantrt:fas_hcq)) %>% 
-    left_join(adsl2, by = "subjectid")
+    left_join(adsl2, by = "subjectid") %>% 
+    relocate(randt, .after = dmicdat)
   
   labelled::var_label(adsl) <- varlabels
   
