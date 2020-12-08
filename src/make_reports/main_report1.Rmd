@@ -1,0 +1,566 @@
+---
+title: "NOR-SOLIDARITY First Interim Report"
+author: "Inge Christoffer Olsen, PhD"
+date: '`r format(Sys.time(), "%d %B, %Y")` '
+output: word_document
+params:
+  viedoc_export: ous_20201016_084109
+  pseudorandom: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+library(tidyverse)
+library(ggformula)
+library(wesanderson)
+library(rlang)
+library(glue)
+library(knitr)
+library(labelled)
+library(survival)
+library(survminer)
+
+```
+
+```{r load-datasets, include = FALSE}
+
+tddm <- read_rds("data/td/tddm.rds")
+tdran <- read_rds("data/td/tdran.rds")
+raw <- read_rds("data/raw/raw.rds")
+adsl <- read_rds("data/ad/adsl.rds")
+adex <- read_rds("data/ad/adex.rds")
+adeff <- read_rds("data/ad/adeff.rds")
+adae <- read_rds("data/ad/adae.rds")
+tdex <- read_rds("data/td/tdex.rds")
+
+
+source("src/External/functions.R", local = knitr::knit_global())
+export_date = substr(params$viedoc_export,5,19) %>% lubridate::as_datetime()
+if(params$pseudorandom) {
+  pr_text = "While the results are based on real data, the treatment allocation has been drawn randomly for this report. Thus, this is a mock-up report intended to show how the final report will look like, without showing the actual results of the trial and the treatment differences."
+} else {
+  pr_text = "The results in this report is according to the true random allocation. "
+}
+```
+
+
+# Introduction
+This is the report for the first interim analysis of the NOR-SOLIDARITY trial. The data are based on an export from the Viedoc electronic data capture at "`r export_date`" system time stamped "`r params$viedoc_export`". `r pr_text` There were `r n_distinct(adsl)` included patients.
+
+# Inclusion status
+
+## Inclusion rate
+
+
+```{r inclusionplot, echo = FALSE}
+adsl %>% 
+  filter(fas == "Yes") %>% 
+  arrange(randt) %>% 
+  mutate(n = row_number()) %>% 
+  gf_line(n ~ randt, color = wes_palette(n=1, name = "Darjeeling1")) %>% 
+  gf_theme(theme = theme_classic()) %>% 
+  gf_labs(y = "Number randomised", x = "Date")
+```
+
+## Inclusion by hospital
+
+```{r by-site, echo = FALSE}
+
+
+adsl %>% 
+  filter(fas == "Yes") %>% 
+  group_by(sitename) %>% 
+  mutate(n=n()) %>% 
+  arrange(-n) %>%  
+  gf_bar(~ reorder(sitename, -n), fill = wes_palette(n=1, name = "Darjeeling1")) %>% 
+  gf_theme(theme = theme_classic() ) %>% 
+  gf_theme(axis.text.x = element_text(angle = 45, hjust = 1)) %>% 
+  gf_labs(x = "", y = "Number randomised")
+
+```
+
+## By treatment
+
+```{r by-treatment, echo = FALSE}
+
+
+
+adsl %>% 
+  filter(fas == "Yes") %>% 
+  group_by(rantrt) %>% 
+  summarise(n=n(), .groups = "drop_last") %>% 
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label=n), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5) +
+  scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
+  theme_classic() + 
+  theme(legend.position = "none") + 
+  labs(x="", y = "Number randomised (all) in FAS")
+
+adsl %>% 
+  filter(fas_hcq == "Yes") %>% 
+  group_by(rantrt) %>% 
+  summarise(n=n(), .groups = "drop_last") %>% 
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label=n), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5) +
+  scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
+  theme_classic() + 
+  theme(legend.position = "none") + 
+  labs(x="", y = "Number randomised (HCQ available) in FAS")
+
+
+adsl %>% 
+  filter(fas_rem == "Yes") %>% 
+  group_by(rantrt) %>% 
+  summarise(n=n(), .groups = "drop_last") %>% 
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label=n), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5) +
+  scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")[c(1,3)]) +
+  theme_classic() + 
+  theme(legend.position = "none") + 
+  labs(x="", y = "Number randomised (remdesivir available) in FAS")
+
+
+
+
+```
+
+\newpage
+
+
+
+```{r headers}
+arms_tot <- c("SOC", "SOC + HCQ", "SOC + Remdesivir")
+total_n <- n_distinct(adsl$subjectid)
+
+arms_hcq <- arms_tot[c(1,2)]
+arms_rem <- arms_tot[c(1,3)]
+
+header <- function(data, arms){
+
+ data %>%
+  group_by(rantrt, subjectid) %>%
+  summarise(n=n(), .groups = "drop_last") %>%
+  group_by(rantrt) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  ungroup() %>%
+  mutate(armtxt = arms) %>%
+  mutate(txt = paste0(armtxt, " (N=", n, ")")) %>%
+  select(txt) %>%
+  deframe
+}
+
+header_tot <- adsl %>% 
+  filter(fas=="Yes") %>% 
+  header(arms_tot)
+
+header_hcq <- adsl %>% 
+  filter(fas_hcq=="Yes") %>% 
+  header(arms_hcq)
+
+header_rem <- adsl %>% 
+  filter(fas_rem=="Yes") %>% 
+  header(arms_rem)
+
+```
+
+
+#Patient flow
+
+```{r patient-flow}
+fas_table <- tribble(
+  ~text, ~f, ~var, ~param,   
+  "Enrolled", "n_pct", "enrolled", list(level = "Yes"),
+  "Randomised", "n_pct", "randomised", list(level = "Yes"), 
+  "Included in FAS", "n_pct", "fas", list(level = "Yes"),
+  "Excluded from FAS, No post-randomisation information", "n_pct", "fasex1", list(level = "Yes"),
+  "Excluded from FAS, incorrect inclusion", "n_pct", "fasex2", list(level = "Yes")
+  )
+
+fas_table %>% 
+  mutate(data = list(adsl %>% mutate(tmp = "Enrolled")),
+         group = "tmp") %>% 
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>% 
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, Enrolled) %>% 
+  knitr::kable(col.names = c("Parameter", "Total"),
+               caption = "Patient flow total")
+
+fas_table %>% 
+  filter(text != "Enrolled") %>% 
+  mutate(data = list(adsl),
+         group = "rantrt") %>% 
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>% 
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, any_of(levels(adsl$rantrt))) %>% 
+  knitr::kable(col.names = c("Parameter", arms_tot),
+               caption = "Patient flow by arm")
+```
+
+
+# Demographics
+
+
+
+
+```{r demographics, warning = FALSE, message = FALSE, results = 'asis', echo = FALSE}
+
+dm_table <- tribble(
+  ~text, ~f, ~var, ~param,
+  "Age (years)", "mean_sd", "age_calc", list(digits = 1), 
+  "Female, n (%)", "n_pct", "sex", list(level = "Female"), 
+  "Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
+  "Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
+  "Body Mass Index (kg/m^2^) mean", "mean_sd", "vsbmi", list(digits = 0),
+  "Body Mass Index (kg/m^2^) median", "median_iqr", "vsbmi", list(digits = 0),
+  "Obese (BMI > 30 kg/m^2^), n(%)", "n_pct", "vsobese", list(level="Obese"),
+  "Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
+  "Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0), 
+  "Mean Arterial Blood Pressure (mmHg)", "mean_sd", "vsmap", list(digits = 0),
+  "Temperature (°C)", "mean_sd", "vstemp", list(digits = 1), 
+  "SOFA score", "mean_sd", "scsumsc", list(digits = 1),
+  "**Comorbidities or risk factors**", "empty", "", list(),
+  " Chronic cardiac disease, including congenital heart disease", "n_pct", "cc_card", list(level = "Yes"),
+  " Ever smoking, n(%)", "n_pct", "cc_eversmoker", list(level = "Yes"), 
+  " Hypertension, n(%)", "n_pct", "cc_ht", list(level = "Yes"),
+  " Chronic pulmonary disease, n(%)", "n_pct", "cc_copd", list(level = "Yes"),
+  " Chronic kidney disease, n(%)", "n_pct", "cc_ckd", list(level = "Yes"),
+  " Autoimmune disease, n(%)", "n_pct", "cc_aid", list(level = "Yes"),
+  " Diabetes, n(%)", "n_pct", "cc_diab", list(level = "Yes"),
+  " Cognitive impairment/dementia, n(%)", "n_pct", "cc_cogn", list(level = "Yes"),
+  " Neurological disorder, n(%)", "n_pct", "cc_neur", list(level = "Yes"),
+  " Cancer, n(%)", "n_pct", "cc_cance", list(level = "Yes"),
+  " Cirrhosis, n(%)", "n_pct", "cc_cirr", list(level = "Yes"),
+  " Asthma, n(%)", "n_pct", "cc_asthm", list(level = "Yes"),
+  " HIV, n(%)", "n_pct", "cc_hiv", list(level = "Yes"),
+  " Active TB, n(%)", "n_pct", "cc_tb", list(level = "Yes"),
+  "**Co-medications**", "empty", "", list(),
+  "Steroids", "n_pct", "me9", list(level = "Yes"),
+  "Other immunomodulatory drugs", "n_pct", "me10", list(level = "Yes"),
+  "ACE inhibitor", "n_pct", "me1", list(level = "Yes"),
+  "AT-II blockers", "n_pct", "me2", list(level = "Yes")
+)
+
+labtable <- addm %>% 
+  select(lbferres:lbwbcres) %>% 
+  var_label(unlist = TRUE)  
+  
+labtable <- tibble(text = labtable, 
+                   var = names(labtable),
+                   f = "median_iqr",
+                   param = list(tibble(digits = 1)))   
+
+dm_table <- dm_table %>%
+  add_row(tibble_row(text ="Median Laboratory values (IQR)", 
+                     f = "empty", var = "")) %>% 
+  add_row(labtable)
+  
+  
+
+dm_table_f <- function( data, table_temp, caption, header){
+table_temp %>%
+  mutate(data = list(data),
+         group = "rantrt") %>%
+  mutate(res = pmap(list(f, data, var, group, param), stats_exec)) %>%
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, any_of(levels(adsl$rantrt))) %>%
+  knitr::kable(col.names = c("Parameter", header),
+               caption = caption)
+}
+
+
+addm_hcq <- addm  %>% filter(fas_hcq == "Yes")
+addm_rem <- addm  %>% filter(fas_rem == "Yes")
+
+
+dm_table_f(addm, dm_table, "Demographics, all arms (FAS)", header_tot)
+
+dm_table_f(addm_hcq, dm_table, "Demographics, HCQ (FAS)", header_hcq)
+
+dm_table_f(addm_rem, dm_table, "Demographics, Remdesivir (FAS)", header_rem)
+
+
+missing_table <- dm_table %>% 
+  mutate(f = if_else(var == "", "empty","missing_f")) 
+
+dm_table_f(addm, missing_table, "Missing values, all arms (FAS)", header_tot)
+
+
+```
+
+# Exposure
+
+```{r exposure, results = "asis", echo = FALSE}
+
+ex_table <- tribble(
+  ~text, ~f, ~var, ~param,   
+  "Total dose (mg), median (IQR)", "median_iqr", "extotdose", list(digits = 0),
+  "Treatment duration, median (IQR)", "median_iqr", "extrtdur", list(digits = 0), 
+  "Number of doses given, median (IQR)", "median_iqr", "exndose", list(digits = 0),
+  "Patients with any treatment discrepencies, n (%)	", "n_pct", "exdisc", list(level = "Yes")
+  )
+
+ex_table %>% 
+  mutate(data = list(adex %>% filter(fas == "Yes")),
+         group = "rantrt") %>% 
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>% 
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, c("Hydroxychloroquine + SOC", "Remdesivir + SOC")) %>% 
+  knitr::kable(col.names = c("Parameter", header_tot[c(2,3)]),
+               caption = "Exposure to study treatment")
+
+
+
+
+
+
+```
+# Efficacy
+
+## Mortality
+
+### Descriptives
+```{r mortality-descriptives}
+
+mort_desc_f <- function(filter_name = fas, caption){
+adev %>% filter({{filter_name}} == "Yes") %>% 
+  group_by(rantrt, survcens) %>% 
+  summarise(n = n(), .groups = "drop_last") %>%
+  mutate(N =  sum(n),
+         pct = round(n/N*100, digits = 1)) %>% 
+  filter(survcens =="No") %>% 
+  select(-survcens) %>% 
+  knitr::kable(col.names = c("Treatment", "# deaths", "# randomised", "%"), caption = caption)
+}
+
+mort_desc_f(caption = "All arms (FAS)")
+
+mort_desc_f(fas_hcq, caption = "HCQ (FAS)")
+
+mort_desc_f(fas_rem, caption = "Remdesivir (FAS)")
+
+
+```
+
+
+```{r}
+
+RR_f <- function(diff){
+  if(length(diff$n) != 2)
+    return ("Not applicable")
+  
+  RR <- (diff$obs[2]-diff$exp[2])/diff$var[2,2]
+  RR_l <- RR - qnorm(0.975)*sqrt(1/diff$var[2,2])
+  RR_u <- RR + qnorm(0.975)*sqrt(1/diff$var[2,2])
+  
+  txt <- paste0("Estimated relative risk: ", round(exp(RR), digits = 2), " (95% CI ", 
+                round(exp(RR_l), digits = 2), " to ", round(exp(RR_u), digits = 2), ")")
+  return(txt)
+}
+
+data <- tibble(
+  data = list(adev, adev %>% filter(fas_hcq == "Yes"), adev %>% filter(fas_rem == "Yes")),
+  dname = c("All", "Hydroxychloroquine only", "Remdesivir only")            
+              )
+survres <- tibble(
+  formula = list( Surv(survtime, survcens == "No") ~ rantrt,
+                       Surv(survtime_60, survcens_60 == "No") ~ rantrt, 
+                       Surv(survtime_28, survcens_28 == "No") ~ rantrt),
+  fname = c("Full timeframe", "Censored at 60 days", "Censored at 28 days")
+  ) %>% 
+  crossing(data) %>% 
+  mutate(fit = map2(formula, data, ~surv_fit(formula = .x, data = .y)),
+         plot = map2(fit, data, ~ggsurvplot(fit = .x, data = .y)),
+         diff = map2(formula, data, ~survdiff(formula = .x, data = .y)),
+         chisq = map(diff, ~.x$chisq),
+         pval = map(diff, ~round(1-pchisq(.x$chisq, length(.x$obs)-1), digits = 3)),
+         RR = map(diff, ~RR_f(.x)))
+
+survres$diff
+
+# 
+# 
+# fit <- surv_fit(formula.list, data = adev)
+# diff <- survdiff(formula.list, data = adev)
+# ggsurvplot(fit, data = adev, risk.table = TRUE, pval = TRUE, fun = "event") 
+# 
+# fit <- surv_fit(formula.list, data = adev %>% filter(fas_hcq == "Yes"))
+# ggsurvplot(fit, data = adev %>% filter(fas_hcq == "Yes"), risk.table = TRUE, pval = TRUE, fun = "event") 
+# 
+# fit <- surv_fit(formula.list, data = adev %>% filter(fas_rem == "Yes"))
+# ggsurvplot(fit, data = adev %>% filter(fas_rem == "Yes"), risk.table = TRUE, pval = TRUE, fun = "event") 
+
+
+
+
+```
+
+
+# Adverse Events
+
+
+## AE Summary
+
+```{r ae-summary}
+
+adae_fas <- adae %>% filter(fas =="Yes")
+
+ae_summary_table <- tribble(
+    ~text,  ~var, ~f,
+  "Number of AEs", "anyae", "ae_N_n_pct",
+  "Number of patients with any AEs?", "anyae", "ae_n_pct",
+  "Number of patients with one AE", "one_ae", "ae_n_pct",
+  "Number of patients with two AE", "two_ae", "ae_n_pct",
+  "Number of patients with three or more AEs", "three_plus_ae", "ae_n_pct",
+  "Number of SAEs", "sae", "ae_N_n_pct",
+  "Number of patients with any SAEs?", "anysae","ae_n_pct"
+)
+
+tmp<-ae_summary_table %>%
+  mutate(data = list(adae_fas),
+         group = "rantrt",
+         param = list(level = 1)) %>%
+  mutate(res = pmap(list(f, data, var, group, param), stats_exec)) %>%
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  mutate(id = paste0("txt", id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, starts_with("txt")) %>%
+  knitr::kable(col.names = c("Parameter", header_tot),
+        caption = "Summary of Adverse Events")
+
+tmp
+```
+
+The numbers are [Number of events] Number of patients (percentage of patients), or Number of patients (percentage of patients)
+
+
+## By System Organ Class and Preferred Term
+
+```{r aetab1}
+ae_table_fns <- function(data, filtervar){
+
+  filtervar = ensym(filtervar)
+
+  data %>%
+    group_by(rantrt) %>%
+    mutate(N_pat = n_distinct(subjectid)) %>%
+    filter(!!filtervar == 1)  %>%
+    group_by(subjectid, rantrt, N_pat, soc_name, pt_name) %>%
+    summarise(n_ae = n(),
+              .groups = "drop_last") %>%
+    filter(!is.na(pt_name)) %>%
+    group_by(rantrt, N_pat, soc_name, pt_name) %>%
+    summarise(n_pat = n(),
+              n_ae = sum(n_ae),
+              .groups = "drop_last") %>%
+    mutate(pct = round(n_pat/N_pat*100,digits = 1),
+           txt = paste0("[", n_ae,"] ", n_pat, " (", pct, "%)"),
+           arm = rantrt) %>%
+    ungroup %>% select(arm, soc_name, pt_name, txt) %>%
+    pivot_wider(values_from = txt, names_from = arm, values_fill = list(txt = "")) %>%
+    #mutate_at(vars(starts_with("arm")), ~if_else(is.na(.), "", .)) %>%
+    arrange(soc_name, pt_name) %>%  group_by(soc2 = soc_name) %>%
+    mutate(soc_name = if_else(row_number() != 1, "", soc_name)) %>% ungroup() %>% select(-soc2) %>%
+    filter(soc_name != "NA")
+}
+
+adae_fas %>%
+  bind_rows(adae_fas, .id="added") %>%
+  mutate(pt_name = if_else(added == 2, "#Total", pt_name)) %>%
+  mutate(all = 1) %>%
+  ae_table_fns("all") %>%
+  knitr::kable(col.names = c("System Organ Class", "Preferred Term", header_tot),
+               caption = " Adverse Events by System Organ Class and Preferred term", longtable = TRUE, booktabs = TRUE) #%>%
+  #column_spec(1:2, width = "5cm")
+```
+
+## Serious Adverse Events
+
+```{r saetab}
+
+adae_fas %>%
+  bind_rows(adae, .id="added") %>%
+  mutate(pt_name = if_else(added == 2, "#Total", pt_name)) %>%
+  ae_table_fns("aesercd") %>%
+  knitr::kable( col.names = c("System Organ Class", "Preferred Term", header_tot),
+               caption = "Serious Adverse Events by System Organ Class and Preferred term",
+         booktabs = TRUE,
+         longtable = TRUE) #%>%
+  #column_spec(1:2, width = "5cm")
+
+```
+
+## Suspected Unexpected Serious Adverse Reaction
+
+```{r susar}
+
+adae_fas %>%
+  bind_rows(adae, .id="added") %>%
+  mutate(pt_name = if_else(added == 2, "#Total", pt_name)) %>%
+  mutate(susar = (aesercd == 1) & (saerelcd == 2) & saeexpcd ==2) %>%
+  ae_table_fns("susar") %>%
+  rename( "System Organ Class" = soc_name,  "Preferred Term" = pt_name) %>%
+  knitr::kable(
+               caption = "Suspected Unexpected Serious Adverse Reaction by System Organ Class and Preferred term",
+         booktabs = TRUE,
+         longtable = TRUE)
+
+```
+
+# Mortality and other outcomes by admission state
+
+```{r}
+adeff %>%
+  group_by(sq_admis, outcome) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  group_by(sq_admis) %>%
+  mutate(tot = sum(n),
+           pct = round(n/tot*100,digits = 1)) %>%
+  mutate(txt = paste0(n, " (", pct, "%)")) %>%
+  ungroup %>%
+  select(-(n:pct)) %>%
+  pivot_wider(values_from = txt, names_from = sq_admis) %>%
+  knitr::kable( booktabs = TRUE, caption = "Outcome")
+
+```
+
+
+
+
+<!-- # Outcome -->
+
+<!-- The following report is based on pseudo-randomised groups, not true allocations. The true allocations are available for the DMC only. -->
+
+<!-- ```{r outcome} -->
+
+<!-- adeff %>% -->
+<!--   mutate(rantrt = sample(rantrt, n(), replace = FALSE)) %>% #Delete this row for true allocations -->
+<!--   group_by(rantrt, outcome) %>% -->
+<!--   summarise(n = n(), .groups = "drop_last") %>% -->
+<!--   group_by(rantrt) %>% -->
+<!--   mutate(tot = sum(n), -->
+<!--            pct = round(n/tot*100,digits = 1)) %>% -->
+<!--   mutate(txt = paste0(n, " (", pct, "%)")) %>% -->
+<!--   ungroup %>% -->
+<!--   select(-(n:pct)) %>% -->
+<!--   pivot_wider(values_from = txt, names_from = rantrt) %>% -->
+<!--   knitr::kable(col.names = c("Parameter", header), booktabs = TRUE, caption = "Outcome") -->
+
+
+<!-- ``` -->
+

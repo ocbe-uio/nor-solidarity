@@ -74,9 +74,10 @@ survtmp <-  adsl %>%
 library(survival)
 library(survminer)
 
-fit <- survfit(Surv(survtime_60, survcens_60 == "No") ~ early, data = survtmp)
+fit <- surv_fit(Surv(survtime_28, survcens_28 == "No") ~ rantrt, data = adev)
+tmp <- survdiff(Surv(survtime_28, survcens_28 == "No") ~ rantrt, data = adev)
 
-ggsurvplot(fit, data = survtmp, risk.table = TRUE)
+ggsurvplot(fit, data = adev, risk.table = TRUE)
 
 fit2 <- survfit(Surv(prog_time14, prog_14 == "Yes") ~ early , data = survtmp %>% filter(rcwhostate_bl=="Moderate"))
 
@@ -87,13 +88,20 @@ ggsurvplot(fit2, data = survtmp, risk.table = TRUE)
 #############################
 
 test <- survdiff(Surv(survtime, survcens == "No") ~ early , data = survtmp)
-test <- survdiff(Surv(survtime_60, survcens_60 == "No") ~ strata(young) + rcwhostate_bl, data = survtmp)
+test <- survdiff(Surv(survtime_60, survcens_60 == "No") ~ rantrt, data = adev %>% filter(fas_rem == "Yes"))
 
 test
-(test$obs[1]-test$exp[1])^2/test$var[1][1]
+(test$obs[2]-test$exp[2])^2/test$var[2,2]
+test$obs
+test$var
 
 RR <- (test$obs[1]-test$exp[1])/test$var[1][1]
-RR
+RR_l <- RR - qnorm(0.975)*sqrt(1/test$var[1][1])
+RR_u <- RR + qnorm(0.975)*sqrt(1/test$var[1][1])
+exp(RR)
+exp(RR_l)
+exp(RR_u)
+
 
 addm %>% mutate(age_cat = cut(age_calc, breaks = c(-Inf, 50, 60, 70, 80, Inf))) %>% group_by(age_cat) %>% summarise(n=n())
 

@@ -34,7 +34,7 @@ addm <- adsl %>% select(-age_calc,  -sex) %>%
             by = "subjectid") %>% 
   left_join(tdrc %>%
               filter(eventid == "V00") %>%
-              select(subjectid, rcoxyter, rcratio),
+              select(subjectid, rcoxyter, rcratio, rcwhocps, rcwhostate),
             by = "subjectid") %>%  
   # Add baseline SOFA score
   left_join(tdsc %>% filter(eventid == "V00") %>% select(subjectid, scsumsc), by = "subjectid") %>% 
