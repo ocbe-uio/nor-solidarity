@@ -6,6 +6,7 @@ source("src/external/functions.R")
 # Input from raw: ran, ran123, ran13, who
 ##############
 
+
 raw <- readr::read_rds("data/raw/raw.rds")
 items <- raw %>% pick("items")
 

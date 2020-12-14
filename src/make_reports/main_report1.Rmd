@@ -33,6 +33,8 @@ adex <- read_rds("data/ad/adex.rds")
 adeff <- read_rds("data/ad/adeff.rds")
 adae <- read_rds("data/ad/adae.rds")
 tdex <- read_rds("data/td/tdex.rds")
+addm <- read_rds("data/ad/addm.rds")
+adev <- read_rds("data/ad/adev.rds")
 
 
 source("src/External/functions.R", local = knitr::knit_global())
@@ -221,6 +223,9 @@ dm_table <- tribble(
   "Female, n (%)", "n_pct", "sex", list(level = "Female"), 
   "Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
   "Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
+  "WHO Moderate disease state (4-5), n(%)", "n_pct", "rcwhostate", list(level = "Moderate"),
+  "WHO Severe disease state (6-9), n(%)", "n_pct", "rcwhostate", list(level = "Severe"),
+  "WHO Severe disease state (6), n(%)", "n_pct", "rcwhocps", list(level = 6),  
   "Body Mass Index (kg/m^2^) mean", "mean_sd", "vsbmi", list(digits = 0),
   "Body Mass Index (kg/m^2^) median", "median_iqr", "vsbmi", list(digits = 0),
   "Obese (BMI > 30 kg/m^2^), n(%)", "n_pct", "vsobese", list(level="Obese"),
@@ -356,55 +361,77 @@ mort_desc_f(fas_rem, caption = "Remdesivir (FAS)")
 
 ```
 
+```{r mortres}
+mortres <- read_rds("results/rds/mortres.rds")
 
-```{r}
 
-RR_f <- function(diff){
-  if(length(diff$n) != 2)
-    return ("Not applicable")
+
+mortres %>% 
+  mutate(title = glue::glue("{fname}, {dname}"),
+         plot = map2(plot, title, ~ .x + ggtitle(.y)),
+         walk(plot,print)) %>% 
+  invisible()
   
-  RR <- (diff$obs[2]-diff$exp[2])/diff$var[2,2]
-  RR_l <- RR - qnorm(0.975)*sqrt(1/diff$var[2,2])
-  RR_u <- RR + qnorm(0.975)*sqrt(1/diff$var[2,2])
-  
-  txt <- paste0("Estimated relative risk: ", round(exp(RR), digits = 2), " (95% CI ", 
-                round(exp(RR_l), digits = 2), " to ", round(exp(RR_u), digits = 2), ")")
-  return(txt)
+mortres %>% 
+   mutate(title = glue::glue("{fname}, {dname}")) %>% 
+  select(title, RR, pval) %>% 
+  knitr::kable(caption = "Relative risk estimates and p-values",
+               col.names = c("Timeframe, Population", "Relative risk", "P-value"))
+
+
+```
+
+
+
+```{r efflbres, results = "asis", echo = FALSE}
+efflbres <- read_rds("results/rds/efflbres.rds")
+
+
+
+plot_cont_margins <- function(data, ytitle = "Value") {
+  data %>%
+    gf_line(
+      margin ~ studyday,
+      color = ~ rantrt,
+      group = ~ rantrt,
+      position = position_dodge(0.4),
+      size = 1
+    ) %>%
+    gf_point(position = position_dodge(0.4)) %>%
+    gf_errorbar(
+      ci_lb + ci_ub ~ studyday,
+      color = ~ rantrt,
+      width = .8,
+      position = position_dodge(0.4)
+    ) %>%
+    gf_labs(x = "Study day",
+            y = ytitle,
+            color = "Treatment") %>%
+    gf_theme(theme_classic())
+    
 }
 
-data <- tibble(
-  data = list(adev, adev %>% filter(fas_hcq == "Yes"), adev %>% filter(fas_rem == "Yes")),
-  dname = c("All", "Hydroxychloroquine only", "Remdesivir only")            
-              )
-survres <- tibble(
-  formula = list( Surv(survtime, survcens == "No") ~ rantrt,
-                       Surv(survtime_60, survcens_60 == "No") ~ rantrt, 
-                       Surv(survtime_28, survcens_28 == "No") ~ rantrt),
-  fname = c("Full timeframe", "Censored at 60 days", "Censored at 28 days")
-  ) %>% 
-  crossing(data) %>% 
-  mutate(fit = map2(formula, data, ~surv_fit(formula = .x, data = .y)),
-         plot = map2(fit, data, ~ggsurvplot(fit = .x, data = .y)),
-         diff = map2(formula, data, ~survdiff(formula = .x, data = .y)),
-         chisq = map(diff, ~.x$chisq),
-         pval = map(diff, ~round(1-pchisq(.x$chisq, length(.x$obs)-1), digits = 3)),
-         RR = map(diff, ~RR_f(.x)))
 
-survres$diff
+efflbres <- efflbres %>% 
+  mutate(marginsplot = pmap(list(data = margins, ytitle = label), plot_cont_margins),
+         title = glue::glue("{label}, {population}"))
 
-# 
-# 
-# fit <- surv_fit(formula.list, data = adev)
-# diff <- survdiff(formula.list, data = adev)
-# ggsurvplot(fit, data = adev, risk.table = TRUE, pval = TRUE, fun = "event") 
-# 
-# fit <- surv_fit(formula.list, data = adev %>% filter(fas_hcq == "Yes"))
-# ggsurvplot(fit, data = adev %>% filter(fas_hcq == "Yes"), risk.table = TRUE, pval = TRUE, fun = "event") 
-# 
-# fit <- surv_fit(formula.list, data = adev %>% filter(fas_rem == "Yes"))
-# ggsurvplot(fit, data = adev %>% filter(fas_rem == "Yes"), risk.table = TRUE, pval = TRUE, fun = "event") 
-
-
+efflbres %>% 
+  mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print),
+         desc_plot2 = map2(desc_plot, title, ~ .x + ggtitle(.y)),
+         walk(desc_plot2, print),
+         walk(marginsplot, print),
+         walk2(diffs, title,  ~knitr::kable(.x, caption = .y, 
+                                            col.names = c("Treatment", 
+                                                          "Days since randomisation", 
+                                                          "Treatment difference",
+                                                          "P-value", 
+                                                          "Lower 95% CL",
+                                                          "Upper 95% CL")) %>% 
+                 print)
+         )  %>% 
+  invisible()
+  
 
 
 ```
@@ -522,22 +549,22 @@ adae_fas %>%
 
 ```
 
-# Mortality and other outcomes by admission state
+<!-- # Mortality and other outcomes by admission state -->
 
-```{r}
-adeff %>%
-  group_by(sq_admis, outcome) %>%
-  summarise(n = n(), .groups = "drop_last") %>%
-  group_by(sq_admis) %>%
-  mutate(tot = sum(n),
-           pct = round(n/tot*100,digits = 1)) %>%
-  mutate(txt = paste0(n, " (", pct, "%)")) %>%
-  ungroup %>%
-  select(-(n:pct)) %>%
-  pivot_wider(values_from = txt, names_from = sq_admis) %>%
-  knitr::kable( booktabs = TRUE, caption = "Outcome")
+<!-- ```{r} -->
+<!-- adeff %>% -->
+<!--   group_by(sq_admis, outcome) %>% -->
+<!--   summarise(n = n(), .groups = "drop_last") %>% -->
+<!--   group_by(sq_admis) %>% -->
+<!--   mutate(tot = sum(n), -->
+<!--            pct = round(n/tot*100,digits = 1)) %>% -->
+<!--   mutate(txt = paste0(n, " (", pct, "%)")) %>% -->
+<!--   ungroup %>% -->
+<!--   select(-(n:pct)) %>% -->
+<!--   pivot_wider(values_from = txt, names_from = sq_admis) %>% -->
+<!--   knitr::kable( booktabs = TRUE, caption = "Outcome") -->
 
-```
+<!-- ``` -->
 
 
 
