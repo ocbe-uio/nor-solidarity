@@ -384,7 +384,7 @@ mortres %>%
 
 
 ```{r efflbres, results = "asis", echo = FALSE}
-efflbres <- read_rds("results/rds/efflbres.rds")
+efflbres <- read_rds("results/rds/efflbres2.rds")
 
 
 
