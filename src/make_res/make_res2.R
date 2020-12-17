@@ -207,12 +207,12 @@ cont_diffs()
 
 adlb <- adsl %>% 
   left_join(tdlb, by = "subjectid") %>% 
-  select(subjectid:eventdate, lbcrpres, lbprores, lbldres, lbferres, lblymres, lbeosres, lbneures) %>% 
+  select(subjectid:eventdate, lbcrpres, lbprores, lbldres, lbferres, lblymres, lbneures) %>% 
   group_by(subjectid) %>% 
   arrange(subjectid, eventdate) %>% 
   mutate(studyday = eventdate - first(eventdate)) %>% 
   ungroup %>% 
-  mutate(across(.cols = lbcrpres:lbneures, ~log(.x + 0.001), .names = "{.col}_log")) %>%
+  mutate(across(.cols = lbcrpres:lbneures, ~.x + 0.001 )) %>%
   mutate(studyday_fct = factor(studyday, ordered = TRUE))
 
 efflab_vars <- adlb  %>% 
@@ -227,10 +227,9 @@ efflab_vars <- adlb  %>%
 
 efflab_results2 <- efflab_vars %>%
   mutate(order = row_number()) %>%
-  crossing(population = c("fas", "fas_hcq", "fas_rem")) %>%
+  crossing(population = c("fas_hcq", "fas_rem")) %>%
   mutate(digits = 2) %>%
-  filter( str_ends(var, "_log")) %>% 
-  
+  #filter( str_ends(var, "_log")) %>% 
   mutate(descriptives = pmap(list(data = list(adlb),
                                   var = var,
                                   population = population,
@@ -241,12 +240,13 @@ efflab_results2 <- efflab_vars %>%
         margins = furrr::future_pmap(list(data = list(adlb),
                                            var = var,
                                            population = population,
-                                           model = "mixed",
-                                           options = ""), cont_margins),
+                                           model = "meglm",
+                                           options = ", family(gamma)"), cont_margins),
         diffs = furrr::future_pmap(list(data = list(adlb),
                                          var = var,
                                          population = population,
-                                         model = "mixed",
-                                         options = ""), cont_diffs))
+                                         model = "meglm",
+                                         options = ", family(gamma)"), cont_diffs)
+        )
 
 write_rds(efflab_results2, "results/rds/efflbres2.rds")
