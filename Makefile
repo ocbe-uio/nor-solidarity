@@ -5,8 +5,8 @@ DMC_REPORT = $(DATE)_Nor-Solidarity_DMC_Report.docx
 MAIN_REPORT1 = $(DATE)_Nor-Solidarity_Main_Report1.docx
 RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
 TDMISC = data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdcm.rds data/td/tdds.rds
-TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds
-AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds data/ad/adex.rds data/ad/addm.rds
+TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds data/td/tdlb.rds
+AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds data/ad/adex.rds data/ad/addm.rds data/ad/adev.rds
 
 # Set this to FALSE when for the true results.  
 PSEUDORANDOM = TRUE
@@ -52,7 +52,7 @@ data/ad/adae.rds: data/td/tdae.rds data/ad/adsl.rds src/make_ad/make_adae.R
 data/ad/adeff.rds: data/td/tdds.rds data/ad/adsl.rds src/make_ad/make_adeff.R
 	Rscript src/make_ad/make_adeff.R
 
-data/ad/adev.rds: data/td/tdds.rds  data/td/tdrc.rds data/ad/adsl.rds src/make_ad/make_adev.R
+data/ad/adev.rds: data/td/tdds.rds  data/td/tdrc.rds data/ad/adsl.rds data/td/tdsq.rds src/make_ad/make_adev.R
 	Rscript src/make_ad/make_adev.R $(DATE)
 
 

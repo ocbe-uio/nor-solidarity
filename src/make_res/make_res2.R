@@ -3,6 +3,8 @@ library(lubridate)
 source("src/external/functions.R")
 
 adev <- read_rds("data/ad/adev.rds")
+adev <- read_rds("data/ad/adlb.rds")
+adsl <- read_rds("data/ad/adsl.rds")
 
 RR_f <- function(diff){
   if(length(diff$n) != 2)
@@ -68,17 +70,18 @@ cont_descriptives <- function(data = adlb,
       q1 = quantile(!!var, 1 / 4, na.rm = TRUE),
       q3 = quantile(!!var, 3 / 4, na.rm = TRUE),
       missing = sum(is.na(!!var)), 
+      nonmissing = sum(!is.na(!!var)),
       .groups = "drop_last"
     ) %>%
     ungroup() %>%
-    mutate_at(vars(mean:q3), ~ round(., digits = digits)) %>%
+    mutate(across(mean:q3, ~ round(., digits = digits))) %>%
     mutate(
       'Mean (SD)' = paste0(mean, " (", sd, ")"),
       'Median [IQR]' = paste0(median, " [", q1, " - ", q3, "]"),
-      Missing = as.character(missing)
+      'Missing / Non-Missing'  = paste0(as.character(missing), " / ", as.character(nonmissing))
     ) %>%
-    select(-(mean:missing)) %>%
-    pivot_longer('Mean (SD)':Missing, names_to = "Statistic") %>%
+    select(-(mean:nonmissing)) %>%
+    pivot_longer('Mean (SD)':'Non-Missing / Non-Missing', names_to = "Statistic") %>%
     select(rantrt, studyday, Statistic, value) %>%
     pivot_wider(
       id_cols = studyday:Statistic,
@@ -89,7 +92,7 @@ cont_descriptives <- function(data = adlb,
   
   return(data)
 }
-
+cont_descriptives()
 
 
 desc_plot <- function(data = adlb, population = "fas", var = "lbcrpres", model = "mixed", options = ""){
@@ -215,9 +218,11 @@ adlb <- adsl %>%
   mutate(across(.cols = lbcrpres:lbneures, ~.x + 0.001 )) %>%
   mutate(studyday_fct = factor(studyday, ordered = TRUE))
 
+
+
 efflab_vars <- adlb  %>% 
   select(starts_with("lb")) %>% 
-  var_label(unlist = TRUE) %>% 
+  labelled::var_label(unlist = TRUE) %>% 
   enframe %>% 
   rename(var = name, label = value)
 
