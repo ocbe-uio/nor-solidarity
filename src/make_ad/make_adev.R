@@ -1,6 +1,6 @@
 ##################
 # Make the events analysis data set
-# Input: tdds, adsl, tdrc
+# Input: tdds, adsl, tdrc, tdsq
 # Output: adev
 ##################
 
@@ -16,7 +16,7 @@ source("src/external/functions.R")
 tdds <- readr::read_rds("data/td/tdds.rds")
 tdrc <- readr::read_rds("data/td/tdrc.rds")
 adsl <- readr::read_rds("data/ad/adsl.rds")
-
+tdsq <- readr::read_rds("data/td/tdsq.rds")
 #######################
 # Set this parameter to false in the Makefile to run the true allocation results.
 #######################

@@ -1,6 +1,4 @@
 
-
-
 #################################
 # Make tdlb for the laboratory values
 #################################
@@ -16,7 +14,6 @@ source("src/external/functions.R")
 raw <- readr::read_rds("data/raw/raw.rds")
 tddm <- readr::read_rds("data/td/tddm.rds")
 items <- raw %>% pick("items")
-
 
 
 tdlbb <- raw %>% 
@@ -39,7 +36,7 @@ tdlb <-tdlbb %>%
   mutate(lbegfrc = ckd_epi(creat = lbcreres, age = age_calc, sex = sex_tmp, eth = ethnicity),
          lbegfrm = mdrd(creat = lbcreres, age = age_calc, sex = sex_tmp, eth = ethnicity)) %>% 
   mutate(across(starts_with("lbegfr"), ~round(.x, digits = 1))) %>% 
-  set_variable_labels(lbegfrc = "eGFR values by the CKD-EPI equation", 
+  labelled::set_variable_labels(lbegfrc = "eGFR values by the CKD-EPI equation", 
                       lbegfrm =  "eGFR values by the MDRD equation") %>% 
   arrange(subjectid, eventdate) %>%
   relocate(starts_with("lbegfr"), .after = lbcreu) %>% 
