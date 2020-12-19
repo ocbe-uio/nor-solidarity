@@ -1,23 +1,15 @@
 library(tidyverse)
 library(lubridate)
+library(survival)
+library(survminer)
 source("src/external/functions.R")
+source("src/make_res/res_functions.R")
+source("src/make_res/stata.R")
 
 adev <- read_rds("data/ad/adev.rds")
-adev <- read_rds("data/ad/adlb.rds")
+tdlb <- read_rds("data/td/tdlb.rds")
 adsl <- read_rds("data/ad/adsl.rds")
 
-RR_f <- function(diff){
-  if(length(diff$n) != 2)
-    return ("Not applicable")
-  
-  RR <- (diff$obs[2]-diff$exp[2])/diff$var[2,2]
-  RR_l <- RR - qnorm(0.975)*sqrt(1/diff$var[2,2])
-  RR_u <- RR + qnorm(0.975)*sqrt(1/diff$var[2,2])
-  
-  txt <- paste0(round(exp(RR), digits = 2), " (95% CI ", 
-                round(exp(RR_l), digits = 2), " to ", round(exp(RR_u), digits = 2), ")")
-  return(txt)
-}
 
 data <- tibble(
   data = list(adev, adev %>% filter(fas_hcq == "Yes"), adev %>% filter(fas_rem == "Yes")),
@@ -40,173 +32,6 @@ survres <- tibble(
 
 write_rds(survres, "results/rds/mortres.rds")
 
-#######################
-# Lab results
-#######################
-
-library(tidyverse)
-
-future::plan(future::multisession) 
-
-
-
-cont_descriptives <- function(data = adlb,
-                              var = "lbcrpres",
-                              population = "fas",
-                              digits = 1) {
-  var <- ensym(var)
-  population <- ensym(population)
-  
-  data <- data %>%
-    filter(!!population == "Yes" &
-              studyday %in% c(0:14)) %>%
-    mutate(rantrt = fct_drop(rantrt)) %>%
-    select(!!var, subjectid, studyday, rantrt) %>%
-    group_by(studyday, rantrt) %>%
-    summarise(
-      mean = mean(!!var, na.rm = TRUE),
-      sd = sd(!!var, na.rm = TRUE),
-      median = median(!!var, na.rm = TRUE),
-      q1 = quantile(!!var, 1 / 4, na.rm = TRUE),
-      q3 = quantile(!!var, 3 / 4, na.rm = TRUE),
-      missing = sum(is.na(!!var)), 
-      nonmissing = sum(!is.na(!!var)),
-      .groups = "drop_last"
-    ) %>%
-    ungroup() %>%
-    mutate(across(mean:q3, ~ round(., digits = digits))) %>%
-    mutate(
-      'Mean (SD)' = paste0(mean, " (", sd, ")"),
-      'Median [IQR]' = paste0(median, " [", q1, " - ", q3, "]"),
-      'Missing / Non-Missing'  = paste0(as.character(missing), " / ", as.character(nonmissing))
-    ) %>%
-    select(-(mean:nonmissing)) %>%
-    pivot_longer('Mean (SD)':'Non-Missing / Non-Missing', names_to = "Statistic") %>%
-    select(rantrt, studyday, Statistic, value) %>%
-    pivot_wider(
-      id_cols = studyday:Statistic,
-      names_from = rantrt,
-      values_from = value
-    ) %>%
-    rename('Days since randomisation' = studyday)
-  
-  return(data)
-}
-cont_descriptives()
-
-
-desc_plot <- function(data = adlb, population = "fas", var = "lbcrpres", model = "mixed", options = ""){
-  var <- ensym(var)
-  population <- ensym(population)
-  
-  plot <- data %>% 
-    filter(!!population == "Yes" & studyday < 15) %>% 
-    ggplot(aes(x=studyday_fct, y=!!var, fill=rantrt)) +
-    geom_boxplot()
-  return(plot)
-}
-
-
-cont_margins <- function(data = adlb,
-                         model = "mixed",
-                         var = "lbcrpres",
-                         options = "",
-                         population = "fas") {
-  var_ <- ensym(var)
-  population <- ensym(population)
-  
-  data <- data %>%
-    filter(!!population == "Yes" &
-             studyday %in% c(0:14)) %>%
-    mutate(rantrt = fct_drop(rantrt)) %>%
-    group_by(subjectid) %>%
-    mutate(outcome = !!var_)
-  
-  x <- glue::glue(
-    "
-tempfile tmp
-
-quietly {model} {var} i.rantrt i.studyday i.rantrt#i.studyday || subjectid: {options}
-quietly margins studyday#rantrt,  saving(`tmp')
-use `tmp', clear
-
-"
-  )
-  
-  margins <-  stata(
-    src = x,
-    data.in = data,
-    data.out = TRUE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 15,
-    stata.echo = FALSE
-  )
-  
-  res <- margins %>%
-    rename_all(~ str_replace(., "_", "")) %>%
-    select(margin, ci_lb:m2) %>%
-    select(rantrt = m2, studyday = m1, margin, ci_lb, ci_ub) %>%
-    print()
-  
-  return(res)
-  
-}
-
-cont_margins()
-
-
-cont_diffs <- function(data = adlb,
-                         model = "mixed",
-                         var = "lbcrpres",
-                         options = "",
-                         population = "fas") {
-  var_ <- ensym(var)
-  population <- ensym(population)
-  
-  data <- data %>%
-    filter(!!population == "Yes" &
-             studyday %in% c(0:14)) %>%
-    mutate(rantrt = fct_drop(rantrt)) %>%
-    group_by(subjectid) %>%
-    mutate(outcome = !!var_)
-  
-  x <- glue::glue(
-    "
-tempfile tmp
-
-quietly {model} {var} i.rantrt i.studyday i.rantrt#i.studyday || subjectid: {options}
-quietly margins studyday, dydx(rantrt)  saving(`tmp')
-use `tmp', clear
-
-"
-  )
-  
-  margins <-  stata(
-    src = x,
-    data.in = data,
-    data.out = TRUE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 15,
-    stata.echo = FALSE
-  )
-  
-  res <- margins %>%
-    rename_all(~ str_replace(., "_", "")) %>%
-    select(deriv, margin, pvalue, ci_lb:m1) %>%
-    mutate(rantrt = fct_recode(
-      deriv, 
-      "Hydroxychloroquine + SOC vs SOC" = "2.rantrt",
-      "Remdesivir + SOC vs SOC" = "3.rantrt"
-    )) %>% 
-    select(rantrt, studyday = m1, margin, pvalue, ci_lb, ci_ub) %>%
-    print()
-  
-  return(res)
-  
-}
-
-cont_diffs()
-
 
 adlb <- adsl %>% 
   left_join(tdlb, by = "subjectid") %>% 
@@ -214,9 +39,10 @@ adlb <- adsl %>%
   group_by(subjectid) %>% 
   arrange(subjectid, eventdate) %>% 
   mutate(studyday = eventdate - first(eventdate)) %>% 
-  ungroup %>% 
   mutate(across(.cols = lbcrpres:lbneures, ~.x + 0.001 )) %>%
-  mutate(studyday_fct = factor(studyday, ordered = TRUE))
+  #mutate(across(lbcrpres:lbneures, ~ first(.x), .names = "{.col}_bl")) %>% 
+  ungroup %>% 
+  mutate(studyday_fct = factor(studyday, ordered = TRUE)) 
 
 
 
@@ -228,6 +54,19 @@ efflab_vars <- adlb  %>%
 
 
 
+#######################
+# Lab results
+#######################
+
+library(tidyverse)
+
+future::plan(future::multisession) 
+
+cont_descriptives()
+
+cont_margins()
+
+cont_diff()
 
 
 efflab_results2 <- efflab_vars %>%

@@ -7,14 +7,16 @@ RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
 TDMISC = data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdcm.rds data/td/tdds.rds
 TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds data/td/tdlb.rds
 AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds data/ad/adex.rds data/ad/addm.rds data/ad/adev.rds
+RD = results/rds/mortres.rds results/rds/efflbres.rds
 
 # Set this to FALSE when for the true results.  
 PSEUDORANDOM = TRUE
 
-.PHONY: all td ad raw dmc_report
-all: td ad raw 
+.PHONY: all td ad rd raw dmc_report
+all: td ad raw rd
 td: $(TD)
 ad: $(AD)
+rd: $(RD)
 raw: data/raw/raw.rds
 dmc_report: results/dmc/$(DMC_REPORT)
 main_report1: results/main/$(MAIN_REPORT1)
@@ -55,9 +57,8 @@ data/ad/adeff.rds: data/td/tdds.rds data/ad/adsl.rds src/make_ad/make_adeff.R
 data/ad/adev.rds: data/td/tdds.rds  data/td/tdrc.rds data/ad/adsl.rds data/td/tdsq.rds src/make_ad/make_adev.R
 	Rscript src/make_ad/make_adev.R $(DATE)
 
-
-#$(AD): $(TD) data/raw/raw.rds src/external/functions.R src/make_ad/make_ad.R
-#	Rscript src/make_ad/make_ad.R $(PSEUDORANDOM)
+results/rds/mortres.rds results/rds/efflbres.rds &: data/ad/adev.rds data/td/tdlb.rds data/ad/adsl.rds src/external/functions.R src/make_res/res_functions.R src/make_res/stata.R src/make_res/make_res.R
+	Rscript src/make_res/make_res.R 
 	
 results/dmc/$(DMC_REPORT): $(AD) $(TD) src/make_reports/dmc_report.Rmd
 	Rscript -e 'rmarkdown::render("src/make_reports/dmc_report.Rmd", \
