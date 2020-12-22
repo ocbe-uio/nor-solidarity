@@ -57,7 +57,7 @@ keep if fas_hcq == 2
 mkspline time_1 7 time_2 = studyday
 gen day14 = studyday == 14
 
-meglm lbcrpres  i.rantrt##c.(time_1 time_2)  || subjectid:, family(gamma)
+meglm lbcrpres  i.rantrt##c.(time_1 time_2)  || subjectid: , family(gamma) 
 margins i.rantrt, dydx(time_1) saving(`tmp1')
 margins r.rantrt, dydx(time_1) saving(`tmp2')
 margins i.rantrt, subpop(day14) saving(`tmp3')

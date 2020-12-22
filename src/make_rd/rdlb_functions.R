@@ -1,15 +1,3 @@
-RR_f <- function(diff){
-  if(length(diff$n) != 2)
-    return ("Not applicable")
-  
-  RR <- (diff$obs[2]-diff$exp[2])/diff$var[2,2]
-  RR_l <- RR - qnorm(0.975)*sqrt(1/diff$var[2,2])
-  RR_u <- RR + qnorm(0.975)*sqrt(1/diff$var[2,2])
-  
-  txt <- paste0(round(exp(RR), digits = 2), " (95% CI ", 
-                round(exp(RR_l), digits = 2), " to ", round(exp(RR_u), digits = 2), ")")
-  return(txt)
-}
 
 
 
