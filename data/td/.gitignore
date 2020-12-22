@@ -2,6 +2,7 @@
 *
 # Except this file
 !.gitignore
+!td_dummy
 
 
 #This folder should contain TD datasets compiled from raw datasets. 

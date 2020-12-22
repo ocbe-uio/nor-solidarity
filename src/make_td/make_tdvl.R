@@ -11,6 +11,7 @@ source("src/external/functions.R")
 
 raw <- readr::read_rds("data/raw/raw.rds")
 rawvl <- read_rds("data/raw/rawvl.rds")
+tdran <- read_rds("data/td/tdran.rds")
 items <- raw %>% pick("items")
 
 
@@ -53,7 +54,7 @@ tdvl <- raw %>%
   rename(vlnasyn = bbnasyn,  vlsampledt = bbnasdt, vllocal = bblocal ) %>% 
   mutate(vlsource = factor(vlsource)) %>% 
   mutate(vlsampledt = lubridate::as_date(vlsampledt)) %>% 
-  left_join(adsl %>% select(subjectid, randt), by = "subjectid") %>% 
+  left_join(tdran %>% select(subjectid, randt), by = "subjectid") %>% 
   mutate(studyday = vlsampledt - randt) %>% 
   set_variable_labels(vlsampledt = "Sample date", 
                       vllocal = "Sample localization", 

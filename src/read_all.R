@@ -3,11 +3,10 @@ library(readr)
 raw <- read_rds("data/raw/raw.rds")
 
 tdae <- read_rds("data/td/tdae.rds")
-tdcc <- read_rds("data/td/tdcc.rds")
 tdcm <- read_rds("data/td/tdcm.rds")
 tddm <- read_rds("data/td/tddm.rds")
 tdds <- read_rds("data/td/tdds.rds")
-tdef <- read_rds("data/td/tdef.rds")
+
 tdex <- read_rds("data/td/tdex.rds")
 tdlb <- read_rds("data/td/tdlb.rds")
 tdran <- read_rds("data/td/tdran.rds")
