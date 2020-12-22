@@ -20,6 +20,17 @@ tdcm <- readr::read_rds("data/td/tdcm.rds")
 adsl <- readr::read_rds("data/ad/adsl.rds")
 tdvs <- readr::read_rds("data/td/tdvs.rds")
 tdrc <- readr::read_rds("data/td/tdrc.rds")
+tdvl <- readr::read_rds("data/td/tdvl.rds")
+
+tdvl_bl <- tdvl %>% 
+  filter(studyday %in% c(-3:1) & 
+           vlsource %in% c("Labfile only", "Both")) %>% 
+  mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0)) %>% 
+  group_by(subjectid) %>% 
+  summarise(vllog10cpkc = mean(vllog10cpkc_imp, rm.na = TRUE), .groups = "drop_last") %>% 
+  labelled::set_variable_labels(vllog10cpkc = "Log10 copies/1000 cells")
+
+  
 
 
 addm <- adsl %>% select(-age_calc,  -sex) %>% 
@@ -36,6 +47,8 @@ addm <- adsl %>% select(-age_calc,  -sex) %>%
               filter(eventid == "V00") %>%
               select(subjectid, rcoxyter, rcratio, rcwhocps, rcwhostate),
             by = "subjectid") %>%  
+  mutate(rcratio40 = if_else(rcratio < 40, "Yes", "No")) %>% 
+  labelled::set_variable_labels(rcratio40 = "Baseline PF-ratio < 40kPa?") %>% 
   # Add baseline SOFA score
   left_join(tdsc %>% filter(eventid == "V00") %>% select(subjectid, scsumsc), by = "subjectid") %>% 
   labelled::set_variable_labels(scsumsc = "Baseline SOFA score") %>% 
@@ -45,7 +58,13 @@ addm <- adsl %>% select(-age_calc,  -sex) %>%
               select(subjectid, lbferres, lbdimres1, lbastres, lbaltres, lbldres, lbcrpres, lbprores,
                      lbhbres, lbpcres, lbneures, lblymres, lbwbcres, lbtrores, lbtrotyp, lbbnpres, 
                      lbcreres, lbcrpres, lbegfrc, lbegfrm), 
-            by = "subjectid")  
+            by = "subjectid") %>% 
+  left_join(tdvl_bl, by = "subjectid")
+
 
 
 write_rds(addm, "data/ad/addm.rds")
+
+
+
+

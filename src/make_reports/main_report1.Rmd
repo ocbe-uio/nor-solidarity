@@ -56,12 +56,12 @@ This is the report for the first interim analysis of the NOR-SOLIDARITY trial. T
 
 
 ```{r inclusionplot, echo = FALSE}
-adsl %>% 
-  filter(fas == "Yes") %>% 
-  arrange(randt) %>% 
-  mutate(n = row_number()) %>% 
-  gf_line(n ~ randt, color = wes_palette(n=1, name = "Darjeeling1")) %>% 
-  gf_theme(theme = theme_classic()) %>% 
+adsl %>%
+  filter(fas == "Yes") %>%
+  arrange(randt) %>%
+  mutate(n = row_number()) %>%
+  gf_line(n ~ randt, color = wes_palette(n=1, name = "Darjeeling1")) %>%
+  gf_theme(theme = theme_classic()) %>%
   gf_labs(y = "Number randomised", x = "Date")
 ```
 
@@ -70,14 +70,14 @@ adsl %>%
 ```{r by-site, echo = FALSE}
 
 
-adsl %>% 
-  filter(fas == "Yes") %>% 
-  group_by(sitename) %>% 
-  mutate(n=n()) %>% 
-  arrange(-n) %>%  
-  gf_bar(~ reorder(sitename, -n), fill = wes_palette(n=1, name = "Darjeeling1")) %>% 
-  gf_theme(theme = theme_classic() ) %>% 
-  gf_theme(axis.text.x = element_text(angle = 45, hjust = 1)) %>% 
+adsl %>%
+  filter(fas == "Yes") %>%
+  group_by(sitename) %>%
+  mutate(n=n()) %>%
+  arrange(-n) %>%
+  gf_bar(~ reorder(sitename, -n), fill = wes_palette(n=1, name = "Darjeeling1")) %>%
+  gf_theme(theme = theme_classic() ) %>%
+  gf_theme(axis.text.x = element_text(angle = 45, hjust = 1)) %>%
   gf_labs(x = "", y = "Number randomised")
 
 ```
@@ -88,44 +88,44 @@ adsl %>%
 
 
 
-adsl %>% 
-  filter(fas == "Yes") %>% 
-  group_by(rantrt) %>% 
-  summarise(n=n(), .groups = "drop_last") %>% 
-ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
-  geom_bar(stat = "identity") + 
+adsl %>%
+  filter(fas == "Yes") %>%
+  group_by(rantrt) %>%
+  summarise(n=n(), .groups = "drop_last") %>%
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
+  geom_bar(stat = "identity") +
   geom_text(aes(label=n), vjust=1.6, color="white",
             position = position_dodge(0.9), size=3.5) +
   scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
-  theme_classic() + 
-  theme(legend.position = "none") + 
+  theme_classic() +
+  theme(legend.position = "none") +
   labs(x="", y = "Number randomised (all) in FAS")
 
-adsl %>% 
-  filter(fas_hcq == "Yes") %>% 
-  group_by(rantrt) %>% 
-  summarise(n=n(), .groups = "drop_last") %>% 
-ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
-  geom_bar(stat = "identity") + 
+adsl %>%
+  filter(fas_hcq == "Yes") %>%
+  group_by(rantrt) %>%
+  summarise(n=n(), .groups = "drop_last") %>%
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
+  geom_bar(stat = "identity") +
   geom_text(aes(label=n), vjust=1.6, color="white",
             position = position_dodge(0.9), size=3.5) +
   scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")) +
-  theme_classic() + 
-  theme(legend.position = "none") + 
+  theme_classic() +
+  theme(legend.position = "none") +
   labs(x="", y = "Number randomised (HCQ available) in FAS")
 
 
-adsl %>% 
-  filter(fas_rem == "Yes") %>% 
-  group_by(rantrt) %>% 
-  summarise(n=n(), .groups = "drop_last") %>% 
-ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) + 
-  geom_bar(stat = "identity") + 
+adsl %>%
+  filter(fas_rem == "Yes") %>%
+  group_by(rantrt) %>%
+  summarise(n=n(), .groups = "drop_last") %>%
+ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
+  geom_bar(stat = "identity") +
   geom_text(aes(label=n), vjust=1.6, color="white",
             position = position_dodge(0.9), size=3.5) +
   scale_fill_manual(values=wes_palette(n=3, name="Darjeeling1")[c(1,3)]) +
-  theme_classic() + 
-  theme(legend.position = "none") + 
+  theme_classic() +
+  theme(legend.position = "none") +
   labs(x="", y = "Number randomised (remdesivir available) in FAS")
 
 
@@ -143,6 +143,7 @@ total_n <- n_distinct(adsl$subjectid)
 
 arms_hcq <- arms_tot[c(1,2)]
 arms_rem <- arms_tot[c(1,3)]
+arms_all <- "All patients"
 
 header <- function(data, arms){
 
@@ -158,17 +159,24 @@ header <- function(data, arms){
   deframe
 }
 
-header_tot <- adsl %>% 
-  filter(fas=="Yes") %>% 
+header_tot <- adsl %>%
+  filter(fas=="Yes") %>%
   header(arms_tot)
 
-header_hcq <- adsl %>% 
-  filter(fas_hcq=="Yes") %>% 
+header_hcq <- adsl %>%
+  filter(fas_hcq=="Yes") %>%
   header(arms_hcq)
 
-header_rem <- adsl %>% 
-  filter(fas_rem=="Yes") %>% 
+header_rem <- adsl %>%
+  filter(fas_rem=="Yes") %>%
   header(arms_rem)
+
+header_all <- adsl %>% 
+  filter(fas == "Yes") %>% 
+  summarise(n=n(), .groups = "drop_last") %>% 
+  mutate(txt = paste0("All patients (N=", n, ")")) %>% 
+  select(txt) %>% 
+  deframe
 
 ```
 
@@ -177,34 +185,34 @@ header_rem <- adsl %>%
 
 ```{r patient-flow}
 fas_table <- tribble(
-  ~text, ~f, ~var, ~param,   
+  ~text, ~f, ~var, ~param,
   "Enrolled", "n_pct", "enrolled", list(level = "Yes"),
-  "Randomised", "n_pct", "randomised", list(level = "Yes"), 
+  "Randomised", "n_pct", "randomised", list(level = "Yes"),
   "Included in FAS", "n_pct", "fas", list(level = "Yes"),
   "Excluded from FAS, No post-randomisation information", "n_pct", "fasex1", list(level = "Yes"),
   "Excluded from FAS, incorrect inclusion", "n_pct", "fasex2", list(level = "Yes")
   )
 
-fas_table %>% 
+fas_table %>%
   mutate(data = list(adsl %>% mutate(tmp = "Enrolled")),
-         group = "tmp") %>% 
-  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>% 
+         group = "tmp") %>%
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
   unnest(c(res, id)) %>%
   pivot_wider(values_from = res, names_from = id) %>%
-  select(text, Enrolled) %>% 
+  select(text, Enrolled) %>%
   knitr::kable(col.names = c("Parameter", "Total"),
                caption = "Patient flow total")
 
-fas_table %>% 
-  filter(text != "Enrolled") %>% 
+fas_table %>%
+  filter(text != "Enrolled") %>%
   mutate(data = list(adsl),
-         group = "rantrt") %>% 
-  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>% 
+         group = "rantrt") %>%
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
   unnest(c(res, id)) %>%
   pivot_wider(values_from = res, names_from = id) %>%
-  select(text, any_of(levels(adsl$rantrt))) %>% 
+  select(text, any_of(levels(adsl$rantrt))) %>%
   knitr::kable(col.names = c("Parameter", arms_tot),
                caption = "Patient flow by arm")
 ```
@@ -219,68 +227,79 @@ fas_table %>%
 
 dm_table <- tribble(
   ~text, ~f, ~var, ~param,
-  "Age (years)", "mean_sd", "age_calc", list(digits = 1), 
-  "Female, n (%)", "n_pct", "sex", list(level = "Female"), 
-  "Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
-  "Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
-  "WHO Moderate disease state (4-5), n(%)", "n_pct", "rcwhostate", list(level = "Moderate"),
-  "WHO Severe disease state (6-9), n(%)", "n_pct", "rcwhostate", list(level = "Severe"),
-  "WHO Severe disease state (6), n(%)", "n_pct", "rcwhocps", list(level = 6),  
-  "Body Mass Index (kg/m^2^) mean", "mean_sd", "vsbmi", list(digits = 0),
-  "Body Mass Index (kg/m^2^) median", "median_iqr", "vsbmi", list(digits = 0),
-  "Obese (BMI > 30 kg/m^2^), n(%)", "n_pct", "vsobese", list(level="Obese"),
-  "Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
-  "Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0), 
-  "Mean Arterial Blood Pressure (mmHg)", "mean_sd", "vsmap", list(digits = 0),
-  "Temperature (°C)", "mean_sd", "vstemp", list(digits = 1), 
-  "SOFA score", "mean_sd", "scsumsc", list(digits = 1),
-  "**Comorbidities or risk factors**", "empty", "", list(),
-  " Chronic cardiac disease, including congenital heart disease", "n_pct", "cc_card", list(level = "Yes"),
-  " Ever smoking, n(%)", "n_pct", "cc_eversmoker", list(level = "Yes"), 
-  " Hypertension, n(%)", "n_pct", "cc_ht", list(level = "Yes"),
-  " Chronic pulmonary disease, n(%)", "n_pct", "cc_copd", list(level = "Yes"),
-  " Chronic kidney disease, n(%)", "n_pct", "cc_ckd", list(level = "Yes"),
-  " Autoimmune disease, n(%)", "n_pct", "cc_aid", list(level = "Yes"),
-  " Diabetes, n(%)", "n_pct", "cc_diab", list(level = "Yes"),
-  " Cognitive impairment/dementia, n(%)", "n_pct", "cc_cogn", list(level = "Yes"),
-  " Neurological disorder, n(%)", "n_pct", "cc_neur", list(level = "Yes"),
-  " Cancer, n(%)", "n_pct", "cc_cance", list(level = "Yes"),
-  " Cirrhosis, n(%)", "n_pct", "cc_cirr", list(level = "Yes"),
-  " Asthma, n(%)", "n_pct", "cc_asthm", list(level = "Yes"),
-  " HIV, n(%)", "n_pct", "cc_hiv", list(level = "Yes"),
-  " Active TB, n(%)", "n_pct", "cc_tb", list(level = "Yes"),
+  "**Demographics**", "empty", "", list(),
+  "  Age (years)", "mean_sd", "age_calc", list(digits = 1),
+  "  Female, n (%)", "n_pct", "sex", list(level = "Female"),
+  "  Body Mass Index (kg/m^2^)", "mean_sd", "vsbmi", list(digits = 0),
+  "  Body Mass Index (kg/m^2^)", "median_iqr", "vsbmi", list(digits = 0),
+  "  Symptoms prior to admission (days)", "mean_sd", "sympdur", list(digits = 1),
+  "  P/F-ratio at admittance (kPa)", "mean_sd", "rcratio", list(digits = 0),
+  "  P/F-ratio < 40kPa, n (%)", "n_pct", "rcratio40", list(level = "Yes"),
+  "  Temperature (°C)", "mean_sd", "vstemp", list(digits = 1),
+  "  Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
+  "  Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
+  " WHO Moderate disease state (4-5), n(%)", "n_pct", "rcwhostate", list(level = "Moderate"),
+  "  WHO Severe disease state (6-9), n(%)", "n_pct", "rcwhostate", list(level = "Severe"),
+  "  WHO Severe disease state (6), n(%)", "n_pct", "rcwhocps", list(level = 6),
+  "  WHO Severe disease state (5), n(%)", "n_pct", "rcwhocps", list(level = 5),
+    "**Comorbidities**", "empty", "", list(),
+  "  Chronic cardiac disease, including congenital heart disease", "n_pct", "cc_card", list(level = "Yes"),
+  "  Chronic pulmonary disease, n(%)", "n_pct", "cc_copd", list(level = "Yes"),
+  "  Ever smoking, n(%)", "n_pct", "cc_eversmoker", list(level = "Yes"),
+  "  Hypertension, n(%)", "n_pct", "cc_ht", list(level = "Yes"),
+  "  Diabetes, n(%)", "n_pct", "cc_diab", list(level = "Yes"),
+  "  Obese (BMI > 30 kg/m^2^), n(%)", "n_pct", "vsobese", list(level="Obese"),
   "**Co-medications**", "empty", "", list(),
-  "Steroids", "n_pct", "me9", list(level = "Yes"),
-  "Other immunomodulatory drugs", "n_pct", "me10", list(level = "Yes"),
-  "ACE inhibitor", "n_pct", "me1", list(level = "Yes"),
-  "AT-II blockers", "n_pct", "me2", list(level = "Yes")
+  "  Steroids", "n_pct", "me9", list(level = "Yes"),
+  "  Other immunomodulatory drugs", "n_pct", "me10", list(level = "Yes"),
+  "  ACE inhibitor", "n_pct", "me1", list(level = "Yes"),
+  "  AT-II blockers", "n_pct", "me2", list(level = "Yes"),
+  "**Hematology**", "empty", "", list(),
+  "  Hemoglobin (g/dL)", "median_iqr", "lbhbres", list(digits = 1),
+  "  WBC (x10^9^/L)", "median_iqr", "lbwbcres", list(digits = 1),
+  "  Neutrophils (x10^9^/L)", "median_iqr", "lbneures", list(digits = 1),
+  "  Lymphocytes (x10^9^/L)", "median_iqr", "lblymres", list(digits = 1),
+  "  Platelet counts (x10^9/L)", "median_iqr", "lbpcres", list(digits = 1),
+  "**Inflammatory markers**", "empty", "", list(),
+  "  CRP (mg/L)", "median_iqr", "lbcrpres", list(digits = 1),
+  "  Procalcitonin (µg/L)", "median_iqr", "lbprores", list(digits = 2),
+  "  Ferritin (µg/L)", "median_iqr", "lbferres", list(digits = 1),
+  "**Other**", "empty", "", list(),
+  "  LDH (U/L)", "median_iqr", "lbldres", list(digits = 1),
+  "  D-dimer (mg/L FEU)", "median_iqr", "lbdimres1", list(digits = 2),
+  "  AST ", "median_iqr", "lbastres", list(digits = 1),
+  "  ALT ", "median_iqr", "lbaltres", list(digits = 1),
+  "  eGFR (mL/min/1.73 m^2^) ", "median_iqr", "lbegfrc", list(digits = 1),
+  "**Viral count**", "empty", "", list(),
+  "  Viral count (log~10~ counts/1000 cells)", "mean_sd", "vllog10cpkc", list(digits = 1),
+  "**Anti-SARS-CoV-2 Ab**", "empty", "", list(),
+  "**Supplementary baseline information**", "empty", "", list(),
+  "  Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
+  "  Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0),
+  "  Mean Arterial Blood Pressure (mmHg)", "mean_sd", "vsmap", list(digits = 0),
+  "  SOFA score", "mean_sd", "scsumsc", list(digits = 1),
+  "  Chronic kidney disease, n(%)", "n_pct", "cc_ckd", list(level = "Yes"),
+  "  Autoimmune disease, n(%)", "n_pct", "cc_aid", list(level = "Yes"),
+  "  Cognitive impairment/dementia, n(%)", "n_pct", "cc_cogn", list(level = "Yes"),
+  "  Neurological disorder, n(%)", "n_pct", "cc_neur", list(level = "Yes"),
+  "  Cancer, n(%)", "n_pct", "cc_cance", list(level = "Yes"),
+  "  Cirrhosis, n(%)", "n_pct", "cc_cirr", list(level = "Yes"),
+  "  Asthma, n(%)", "n_pct", "cc_asthm", list(level = "Yes"),
+  "  HIV, n(%)", "n_pct", "cc_hiv", list(level = "Yes"),
+  "  Active TB, n(%)", "n_pct", "cc_tb", list(level = "Yes")
 )
 
-labtable <- addm %>% 
-  select(lbferres:lbwbcres) %>% 
-  var_label(unlist = TRUE)  
-  
-labtable <- tibble(text = labtable, 
-                   var = names(labtable),
-                   f = "median_iqr",
-                   param = list(tibble(digits = 1)))   
 
-dm_table <- dm_table %>%
-  add_row(tibble_row(text ="Median Laboratory values (IQR)", 
-                     f = "empty", var = "")) %>% 
-  add_row(labtable)
-  
-  
 
-dm_table_f <- function( data, table_temp, caption, header){
+dm_table_f <- function(data, table_temp, caption, header, group = "rantrt"){
 table_temp %>%
   mutate(data = list(data),
-         group = "rantrt") %>%
+         group = group) %>%
   mutate(res = pmap(list(f, data, var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
   unnest(c(res, id)) %>%
   pivot_wider(values_from = res, names_from = id) %>%
-  select(text, any_of(levels(adsl$rantrt))) %>%
+  select(text, any_of(levels(adsl$rantrt)), any_of("Yes")) %>%
   knitr::kable(col.names = c("Parameter", header),
                caption = caption)
 }
@@ -289,6 +308,7 @@ table_temp %>%
 addm_hcq <- addm  %>% filter(fas_hcq == "Yes")
 addm_rem <- addm  %>% filter(fas_rem == "Yes")
 
+dm_table_f(addm, dm_table, "Demographics, all patients (FAS)", header_all, group = "fas")
 
 dm_table_f(addm, dm_table, "Demographics, all arms (FAS)", header_tot)
 
@@ -297,8 +317,8 @@ dm_table_f(addm_hcq, dm_table, "Demographics, HCQ (FAS)", header_hcq)
 dm_table_f(addm_rem, dm_table, "Demographics, Remdesivir (FAS)", header_rem)
 
 
-missing_table <- dm_table %>% 
-  mutate(f = if_else(var == "", "empty","missing_f")) 
+missing_table <- dm_table %>%
+  mutate(f = if_else(var == "", "empty","missing_f"))
 
 dm_table_f(addm, missing_table, "Missing values, all arms (FAS)", header_tot)
 
@@ -310,21 +330,21 @@ dm_table_f(addm, missing_table, "Missing values, all arms (FAS)", header_tot)
 ```{r exposure, results = "asis", echo = FALSE}
 
 ex_table <- tribble(
-  ~text, ~f, ~var, ~param,   
+  ~text, ~f, ~var, ~param,
   "Total dose (mg), median (IQR)", "median_iqr", "extotdose", list(digits = 0),
-  "Treatment duration, median (IQR)", "median_iqr", "extrtdur", list(digits = 0), 
+  "Treatment duration, median (IQR)", "median_iqr", "extrtdur", list(digits = 0),
   "Number of doses given, median (IQR)", "median_iqr", "exndose", list(digits = 0),
   "Patients with any treatment discrepencies, n (%)	", "n_pct", "exdisc", list(level = "Yes")
   )
 
-ex_table %>% 
+ex_table %>%
   mutate(data = list(adex %>% filter(fas == "Yes")),
-         group = "rantrt") %>% 
-  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>% 
+         group = "rantrt") %>%
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
   unnest(c(res, id)) %>%
   pivot_wider(values_from = res, names_from = id) %>%
-  select(text, c("Hydroxychloroquine + SOC", "Remdesivir + SOC")) %>% 
+  select(text, c("Hydroxychloroquine + SOC", "Remdesivir + SOC")) %>%
   knitr::kable(col.names = c("Parameter", header_tot[c(2,3)]),
                caption = "Exposure to study treatment")
 
@@ -341,14 +361,16 @@ ex_table %>%
 ### Descriptives
 ```{r mortality-descriptives}
 
+
+
 mort_desc_f <- function(filter_name = fas, caption){
-adev %>% filter({{filter_name}} == "Yes") %>% 
-  group_by(rantrt, survcens) %>% 
+adev %>% filter({{filter_name}} == "Yes") %>%
+  group_by(rantrt, survcens) %>%
   summarise(n = n(), .groups = "drop_last") %>%
   mutate(N =  sum(n),
-         pct = round(n/N*100, digits = 1)) %>% 
-  filter(survcens =="No") %>% 
-  select(-survcens) %>% 
+         pct = round(n/N*100, digits = 1)) %>%
+  filter(survcens =="No") %>%
+  select(-survcens) %>%
   knitr::kable(col.names = c("Treatment", "# deaths", "# randomised", "%"), caption = caption)
 }
 
@@ -362,19 +384,19 @@ mort_desc_f(fas_rem, caption = "Remdesivir (FAS)")
 ```
 
 ```{r mortres}
-mortres <- read_rds("results/rds/mortres.rds")
+rdev <- read_rds("results/rds/rdev.rds")
 
 
 
-mortres %>% 
+rdev %>%
   mutate(title = glue::glue("{fname}, {dname}"),
          plot = map2(plot, title, ~ .x + ggtitle(.y)),
-         walk(plot,print)) %>% 
+         walk(plot,print)) %>%
   invisible()
-  
-mortres %>% 
-   mutate(title = glue::glue("{fname}, {dname}")) %>% 
-  select(title, RR, pval) %>% 
+
+rdev %>%
+   mutate(title = glue::glue("{fname}, {dname}")) %>%
+  select(title, RR, pval) %>%
   knitr::kable(caption = "Relative risk estimates and p-values",
                col.names = c("Timeframe, Population", "Relative risk", "P-value"))
 
@@ -384,7 +406,7 @@ mortres %>%
 
 
 ```{r efflbres, results = "asis", echo = FALSE}
-efflbres <- read_rds("results/rds/efflbres2.rds")
+rdlb <- read_rds("results/rds/rdlb.rds")
 
 
 
@@ -405,36 +427,158 @@ plot_cont_margins <- function(data, ytitle = "Value") {
       position = position_dodge(0.4)
     ) %>%
     gf_labs(x = "Study day",
-            y = ytitle,
+            y = str2expression(ytitle),
             color = "Treatment") %>%
     gf_theme(theme_classic())
-    
+
 }
 
 
-efflbres <- efflbres %>% 
-  mutate(marginsplot = pmap(list(data = margins, ytitle = label), plot_cont_margins),
-         title = glue::glue("{label}, {population}"))
+lables <- rdlb %>% 
+  select(var) %>% 
+  distinct() %>% 
+  mutate(label =case_when(
+    var == "lbcrpres" ~  "CRP (mg/L)",
+    var == "lbferres" ~  "Ferritin (µg/L)",
+    var == "lbldres" ~   "LDH (U/L)",    
+    var == "lblymres" ~  "Lymphocytes (x10^9/L)",
+    var == "lbneures" ~  "Neutrophils (x10^9/L)",
+    var == "lbprores" ~  "Procalcitonin (µg/L)",
+  ))
 
-efflbres %>% 
+efflbres <- rdlb %>%
+  select(-label) %>% 
+  full_join(lables, by="var") %>% 
+  mutate(poptitle = if_else(population == "fas_hcq", "HCQ", "Remdesivir")) %>% 
+  mutate(marginsplot = pmap(list(data = margins, ytitle = label), plot_cont_margins),
+         title = glue::glue("{label}, {poptitle}"))
+
+
+efflbres %>%
   mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print),
-         desc_plot2 = map2(desc_plot, title, ~ .x + ggtitle(.y)),
-         walk(desc_plot2, print),
+         marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
          walk(marginsplot, print),
-         walk2(diffs, title,  ~knitr::kable(.x, caption = .y, 
-                                            col.names = c("Treatment", 
-                                                          "Days since randomisation", 
+         walk2(diffs, title,  ~knitr::kable(.x, caption = .y,
+                                            col.names = c("Treatment",
+                                                          "Days since randomisation",
                                                           "Treatment difference",
-                                                          "P-value", 
                                                           "Lower 95% CL",
-                                                          "Upper 95% CL")) %>% 
+                                                          "Upper 95% CL",
+                                                          "P-value"),
+                                            digits = 3) %>%
                  print)
-         )  %>% 
+         )  %>%
   invisible()
-  
+
+
 
 
 ```
+# Viral load
+
+```{r viral-load, results = "asis"}
+adsl <- readr::read_rds("data/ad/adsl.rds")
+tdvl<- readr::read_rds("data/td/tdvl.rds")
+
+rdlv_margins <- function(data = advl,
+                           var = "vllog10cpkc_imp",
+                           population = "fas") {
+  var_ <- ensym(var)
+  population <- ensym(population)
+  
+  data <- data %>%
+    filter(!!population == "Yes" &
+             studyday %in% c(-3:15) &
+             vlsource %in% c("Labfile only", "Both")) %>%
+    mutate(rantrt = fct_drop(rantrt),
+           marginset = if_else(studyday %in% c(0, 4 , 8, 15), studyday, NA_real_)) 
+  
+  x <- glue::glue(
+    "
+    
+mkspline time_1 4 time_2 8 time_3 = studyday
+mkspline time1 7 time2  = studyday
+
+tempfile tmp1
+tempfile tmp2
+tempfile tmp3
+
+mixed {var} i.rantrt##c.(time_1 time_2 time_3)  || subjectid: studyday, covariance(unstructured)
+margins i.rantrt, over(marginset) saving(`tmp1')
+
+mixed {var} i.rantrt##c.(time1 time2)  || subjectid: studyday, covariance(unstructured)
+margins i.rantrt, dydx(time1) saving(`tmp2')
+margins r.rantrt, dydx(time1) saving(`tmp3')
+
+use `tmp1', clear
+append using `tmp2' `tmp3' , gen(analysis)
+
+"
+  )
+  
+  margins <-  stata(
+    src = x,
+    data.in = data,
+    data.out = TRUE,
+    stata.path = "/usr/local/bin/stata-se",
+    stata.version = 16,
+    stata.echo = FALSE
+  )
+  
+  res <- margins %>%
+    rename_all(~ str_replace(., "_", "")) %>%
+    select(rantrt = m1 , studyday = by1, margin, ci_lb, ci_ub, pvalue, analysis) 
+
+  
+  return(res)
+  
+}
+
+
+advl <- adsl %>% 
+  left_join(tdvl, by = c("subjectid")) %>% 
+  mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0)) 
+
+
+rdlv_margins(population = "fas_rem") %>% 
+  filter(analysis == 0) %>% 
+  plot_cont_margins(ytitle = "Viral~load~(log[10]~copies~per~1000~cells)") 
+  
+
+rdlv_margins(population = "fas_rem") %>% 
+  filter(analysis != 0) %>% 
+  mutate(Explanation = if_else(analysis == 1, "Slope by treatment", "Difference in slope")) %>% 
+  select(-analysis) %>%
+  select(rantrt, Explanation, margin, ci_lb, ci_ub, pvalue) %>% 
+  knitr::kable(col.names = c("Treatment",
+                             "Explanation",
+                              "Estimate",
+                              "Lower 95% CL",
+                              "Upper 95% CL",
+                              "P-value"),
+               digits = 3, caption = "Estimated treatment effect, HCQ")
+
+rdlv_margins(population = "fas_hcq") %>% 
+  filter(analysis == 0) %>% 
+  plot_cont_margins(ytitle = "Viral~load~(log[10]~copies~per~1000~cells)") 
+  
+
+rdlv_margins(population = "fas_hcq") %>% 
+  filter(analysis != 0) %>% 
+  mutate(Explanation = if_else(analysis == 1, "Slope by treatment", "Difference in slope")) %>% 
+  select(-analysis) %>%
+  select(rantrt, Explanation, margin, ci_lb, ci_ub, pvalue) %>% 
+  knitr::kable(col.names = c("Treatment",
+                             "Explanation",
+                              "Estimate",
+                              "Lower 95% CL",
+                              "Upper 95% CL",
+                              "P-value"),
+               digits = 3, caption = "Estimated treatment effect, HCQ")
+
+
+```
+
 
 
 # Adverse Events
@@ -590,4 +734,3 @@ adae_fas %>%
 
 
 <!-- ``` -->
-
