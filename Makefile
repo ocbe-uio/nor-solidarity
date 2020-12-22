@@ -5,7 +5,7 @@ DMC_REPORT = $(DATE)_Nor-Solidarity_DMC_Report.docx
 MAIN_REPORT1 = $(DATE)_Nor-Solidarity_Main_Report1.docx
 RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
 TDMISC = data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdcm.rds data/td/tdds.rds
-TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds data/td/tdlb.rds
+TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds data/td/tdlb.rds data/td/tdvl.rds
 AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds data/ad/adex.rds data/ad/addm.rds data/ad/adev.rds
 RD = results/rds/rdev.rds results/rds/rdlb.rds
 
@@ -57,6 +57,9 @@ data/td/tdlb.rds: data/raw/raw.rds data/td/tddm.rds src/external/functions.R src
 
 data/td/tdrc.rds data/td/tdvs.rds: data/raw/raw.rds src/external/functions.R src/make_td/make_tdrcvs.R
 	Rscript src/make_td/make_tdrcvs.R
+	
+data/td/tdvl.rds: data/raw/raw.rds data/raw/rawvl.rds src/external/functions.R src/make_td/make_tdvl.R
+	Rscript src/make_td/make_tdvl.R
 	
 ################################	
 # Make Analysis Datasets (AD)
