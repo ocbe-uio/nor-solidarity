@@ -35,7 +35,7 @@ adae <- read_rds("data/ad/adae.rds")
 tdex <- read_rds("data/td/tdex.rds")
 addm <- read_rds("data/ad/addm.rds")
 adev <- read_rds("data/ad/adev.rds")
-tdds <- read_rds("data/td/tdds.rds")
+
 
 source("src/External/functions.R", local = knitr::knit_global())
 export_date = substr(params$viedoc_export,5,19) %>% lubridate::as_datetime()
@@ -398,8 +398,8 @@ mort_desc_f(fas_rem, caption = "Remdesivir (FAS)")
 
 
 ```
-## Mortality Estimates
-```{r mortres, results = "asis"}
+
+```{r mortres}
 rdev <- read_rds("results/rds/rdev.rds")
 
 
@@ -418,13 +418,83 @@ rdev %>%
 
 
 ```
+
+
+
+```{r efflbres, results = "asis", echo = FALSE}
+rdlb <- read_rds("results/rds/rdlb.rds")
+
+
+
+plot_cont_margins <- function(data, ytitle = "Value") {
+  data %>%
+    gf_line(
+      margin ~ studyday,
+      color = ~ rantrt,
+      group = ~ rantrt,
+      position = position_dodge(0.4),
+      size = 1
+    ) %>%
+    gf_point(position = position_dodge(0.4)) %>%
+    gf_errorbar(
+      ci_lb + ci_ub ~ studyday,
+      color = ~ rantrt,
+      width = .8,
+      position = position_dodge(0.4)
+    ) %>%
+    gf_labs(x = "Study day",
+            y = str2expression(ytitle),
+            color = "Treatment") %>%
+    gf_theme(theme_classic())
+
+}
+
+
+lables <- rdlb %>% 
+  select(var) %>% 
+  distinct() %>% 
+  mutate(label =case_when(
+    var == "lbcrpres" ~  "CRP (mg/L)",
+    var == "lbferres" ~  "Ferritin (µg/L)",
+    var == "lbldres" ~   "LDH (U/L)",    
+    var == "lblymres" ~  "Lymphocytes (x10^9/L)",
+    var == "lbneures" ~  "Neutrophils (x10^9/L)",
+    var == "lbprores" ~  "Procalcitonin (µg/L)",
+  ))
+
+efflbres <- rdlb %>%
+  select(-label) %>% 
+  full_join(lables, by="var") %>% 
+  mutate(poptitle = if_else(population == "fas_hcq", "HCQ", "Remdesivir")) %>% 
+  mutate(marginsplot = pmap(list(data = margins, ytitle = label), plot_cont_margins),
+         title = glue::glue("{label}, {poptitle}"))
+
+
+efflbres %>%
+  mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print),
+         marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
+         walk(marginsplot, print),
+         walk2(diffs, title,  ~knitr::kable(.x, caption = .y,
+                                            col.names = c("Treatment",
+                                                          "Days since randomisation",
+                                                          "Treatment difference",
+                                                          "Lower 95% CL",
+                                                          "Upper 95% CL",
+                                                          "P-value"),
+                                            digits = 3) %>%
+                 print)
+         )  %>%
+  invisible()
+
+
+
+
+```
 # Viral load
 
 ```{r viral-load, results = "asis"}
 adsl <- readr::read_rds("data/ad/adsl.rds")
 tdvl<- readr::read_rds("data/td/tdvl.rds")
-
-source("src/make_rd/stata.R")
 
 rdlv_margins <- function(data = advl,
                            var = "vllog10cpkc_imp",
@@ -481,32 +551,6 @@ append using `tmp2' `tmp3' , gen(analysis)
 }
 
 
-
-plot_cont_margins <- function(data, ytitle = "Value") {
-  data %>%
-    gf_line(
-      margin ~ studyday,
-      color = ~ rantrt,
-      group = ~ rantrt,
-      position = position_dodge(0.4),
-      size = 1
-    ) %>%
-    gf_point(position = position_dodge(0.4)) %>%
-    gf_errorbar(
-      ci_lb + ci_ub ~ studyday,
-      color = ~ rantrt,
-      width = .8,
-      position = position_dodge(0.4)
-    ) %>%
-    gf_labs(x = "Study day",
-            y = str2expression(ytitle),
-            color = "Treatment") %>%
-    gf_theme(theme_classic())
-
-}
-
-
-
 advl <- adsl %>% 
   left_join(tdvl, by = c("subjectid")) %>% 
   mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0)) 
@@ -528,7 +572,7 @@ rdlv_margins(population = "fas_rem") %>%
                               "Lower 95% CL",
                               "Upper 95% CL",
                               "P-value"),
-               digits = 3, caption = "Estimated treatment effect, Remdesivir")
+               digits = 3, caption = "Estimated treatment effect, HCQ")
 
 rdlv_margins(population = "fas_hcq") %>% 
   filter(analysis == 0) %>% 
@@ -551,296 +595,7 @@ rdlv_margins(population = "fas_hcq") %>%
 
 ```
 
-#Dichotomous endpoints
 
-## Hydroxychloroquine results
-
-```{r dich, results = "asis"}
-
- di_f <- function(
-                         var = "survcens",
-                         population = "fas") {
-  var_ <- ensym(var)
-  population <- ensym(population)
-  
-  data <- addi %>%
-    filter(!!population == "Yes" ) %>%
-    mutate(rantrt = fct_drop(rantrt))
-    
-  
-  x <- glue::glue(
-    "
-tempfile tmp1
-tempfile tmp2
-
-
-logistic {var} i.rantrt
-margins i.rantrt, saving(`tmp1')
-margins r.rantrt, saving(`tmp2')
-
-
-use `tmp1', clear
-append using `tmp2', gen(type)
-
-"
-  )
-  
-  margins <-  stata(
-    src = x,
-    data.in = data,
-    data.out = TRUE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = FALSE
-  )
-  
-  res <- margins %>%
-    rename_with(~ str_replace(.x, "_", "")) %>%
-    select( margin, pvalue, ci_lb:type) %>%
-    select( rantrt = m1, margin,  ci_lb, ci_ub, pvalue, type) %>% 
-    mutate(across(margin:ci_ub, ~round(.x*100, digits = 1))) %>% 
-    mutate(pvalue = round(pvalue, digits = 3))
-  
-  return(res)
-  
-}
-
-  
-addi <- adev %>% 
-  select(subjectid, starts_with("fas"), rantrt, starts_with("survcens"), starts_with("progression"), starts_with("mv"), starts_with("sq_admis_max")) %>% 
-  mutate(across(starts_with("survcens"), ~ if_else(.x == "No", 1, 0))) %>% 
-  mutate(across(starts_with("progression"), ~ if_else(.x == "Yes", 1, 0))) %>%
-  mutate(across(starts_with("mv"), ~ if_else(.x == "Yes", 1, 0))) %>% 
-  mutate(across(starts_with("sq_admis_max"), ~ if_else(.x == "ICU", 1, 0))) 
-
-
-
-rddi <- tibble(population = c("fas_hcq", "fas_rem")) %>% 
-  crossing(var = c("survcens","survcens_60","survcens_28", "progression", 
-                   "progression28", "progression60", "mv", "mv28", "mv60", 
-                   "sq_admis_max", "sq_admis_max28", "sq_admis_max60")) %>% 
-  mutate(dires = map2(var, population, di_f)) 
-
-rddi %>% unnest(dires) %>% 
-  knitr::kable()
-  
-
-```
-
-
-
-
-# Inflammatory laboratory parameters
-
-
-
-```{r efflbres, results = "asis", echo = FALSE}
-rdlb <- read_rds("results/rds/rdlb.rds")
-
-
-
-lables <- rdlb %>% 
-  select(var) %>% 
-  distinct() %>% 
-  mutate(label =case_when(
-    var == "lbcrpres" ~  "CRP (mg/L)",
-    var == "lbferres" ~  "Ferritin (µg/L)",
-    var == "lbldres" ~   "LDH (U/L)",    
-    var == "lblymres" ~  "Lymphocytes (x10^9/L)",
-    var == "lbneures" ~  "Neutrophils (x10^9/L)",
-    var == "lbprores" ~  "Procalcitonin (µg/L)",
-  ))
-
-efflbres <- rdlb %>%
-  select(-label) %>% 
-  full_join(lables, by="var") %>% 
-  mutate(poptitle = if_else(population == "fas_hcq", "HCQ", "Remdesivir")) %>% 
-  mutate(marginsplot = pmap(list(data = margins, ytitle = label), plot_cont_margins),
-         title = glue::glue("{label}, {poptitle}"))
-
-
-efflbres %>%
-  mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print),
-         marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
-         walk(marginsplot, print),
-         walk2(diffs, title,  ~knitr::kable(.x, caption = .y,
-                                            col.names = c("Treatment",
-                                                          "Days since randomisation",
-                                                          "Treatment difference",
-                                                          "Lower 95% CL",
-                                                          "Upper 95% CL",
-                                                          "P-value"),
-                                            digits = 3) %>%
-                 print)
-         )  %>%
-  invisible()
-
-
-
-
-```
-
-
-# SARS-CoV2 antibodies at day 90
-
-## Main results by quantreg
-
-```{r antibodies}
-library(quantreg) 
-library(broom)
-tdab <- read_rds("data/td/tdab.rds")
-
-adab <- adsl %>% 
-  left_join(tdab %>% select(subjectid, studyday, absumctr, abrbd, abace2rbd ), by = "subjectid") %>% 
-  mutate(abnormrbd = abrbd/absumctr*100) %>% 
-  filter(studyday >65) %>% 
-  mutate(rantrt = factor(rantrt, ordered = FALSE))
-
-lreg_f <- function(var = "abrbd", population = "fas"){
-  # var <- ensym(var)
-  population <- ensym(population)
-
-  f.str <- paste0(var, " ~ rantrt")
-  data <- adab %>%
-    filter(!!population == "Yes") %>%
-    mutate(rantrt = fct_drop(rantrt))
-  #res <- rlang::qqshow(quantreg::rq(!!var ~ rantrt, data = data))
-  res <- lm(as.formula(f.str), data = data) %>%
-    tidy(conf.int = TRUE)
-
-  return(res)
-}
-  
-
-mreg_f <- function(var = "abrbd", population = "fas"){
-  # var <- ensym(var)
-  population <- ensym(population)
-
-  f.str <- paste0(var, " ~ rantrt")
-  data <- adab %>%
-    filter(!!population == "Yes") %>%
-    mutate(rantrt = fct_drop(rantrt))
-  #res <- rlang::qqshow(quantreg::rq(!!var ~ rantrt, data = data))
-  res <- suppressWarnings(quantreg::rq(as.formula(f.str), data = data)) %>%
-    tidy(se = "boot", conf.int = TRUE, R=20000)
-
-  return(res)
-}
-
-rdab <- tibble(
-  population = c("fas_hcq", "fas_rem")
-  ) %>%
-  crossing(var = c("abrbd", "abnormrbd", "abace2rbd")) %>%
-  mutate(res_m = map2(var, population, mreg_f),
-         res_l = map2(var, population, lreg_f)) 
-
-rdab %>%
-  select(-res_l) %>% 
-  unnest(res_m) %>%  
-  knitr::kable(digits = 3)
-
-
-  
-
-
-```
-
-
-## HCQ results from Stata
-
-```{r antibodies-hcq}
-
-
- stata_qreg <-
-    "
-qreg abrbd i.rantrt
-qreg abnormrbd i.rantrt
-qreg abace2rbd i.rantrt
-
-"
-
-  stata(
-    src = stata_qreg,
-    data.in = adab %>% filter(fas_hcq == "Yes"),
-    data.out = FALSE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = TRUE
-  )
-
-
-  
-  
-
-
-```
-
-## Remdesivir results by Stata
-
-```{r antibodies-remdesivir}
-
- stata(
-    src = stata_qreg,
-    data.in = adab %>% filter(fas_hcq == "Yes"),
-    data.out = FALSE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = TRUE
-  )
-
-
-```
-
-
-## Sensitivity results by ANOVA
-
-```{r antibodies-sensitivity}
-
-
-rdab %>%
-  select(-res_m) %>% 
-  unnest(res_l) %>%  
-  knitr::kable(digits = 3)
-
-
-```
-
-# Time to last discharge
-
-## Remdesivir
-
-```{r discharge-rem}
-library(survival)
-library(survminer)
-adev_rem <- adev %>% filter(fas_rem == "Yes")
-fit_rem  <- surv_fit(Surv(dischargeday, dischargecens == "No") ~ rantrt, 
-                      data = adev_rem)
-
-ggsurvplot(fit_rem, data = adev_rem, fun = "event")
-
-fit_rem_28  <- surv_fit (Surv(dischargeday_28, dischargecens_28 == "No") ~ rantrt, 
-                      data = adev_rem)
-
-ggsurvplot(fit_rem_28, data = adev_rem, fun = "event")
-
-```
-## HCQ
-
-```{r discharge-hcq}
-library(survival)
-library(survminer)
-adev_hcq <- adev %>% filter(fas_hcq == "Yes")
-fit_hcq  <- surv_fit(Surv(dischargeday, dischargecens == "No") ~ rantrt, 
-                      data = adev_hcq)
-
-ggsurvplot(fit_hcq, data = adev_hcq, fun = "event")
-
-fit_hcq_28  <- surv_fit (Surv(dischargeday_28, dischargecens_28 == "No") ~ rantrt, 
-                      data = adev_hcq)
-
-ggsurvplot(fit_hcq_28, data = adev_hcq, fun = "event")
-
-```
 
 # Adverse Events
 

@@ -30,7 +30,11 @@ tdvl_bl <- tdvl %>%
   summarise(vllog10cpkc = mean(vllog10cpkc_imp, rm.na = TRUE), .groups = "drop_last") %>% 
   labelled::set_variable_labels(vllog10cpkc = "Log10 copies/1000 cells")
 
-  
+tdab_bl <- tdab %>% 
+  filter(studyday == 1) %>% 
+  mutate(abzeroc = if_else(RBD <= 5, "Yes", "No")) %>% 
+  select(subjectid, abzeroc) %>% 
+  set_variable_labels(abzeroc = "Zero converted (RBD ≤ 5)?")
 
 
 addm <- adsl %>% select(-age_calc,  -sex) %>% 
@@ -59,7 +63,8 @@ addm <- adsl %>% select(-age_calc,  -sex) %>%
                      lbhbres, lbpcres, lbneures, lblymres, lbwbcres, lbtrores, lbtrotyp, lbbnpres, 
                      lbcreres, lbcrpres, lbegfrc, lbegfrm), 
             by = "subjectid") %>% 
-  left_join(tdvl_bl, by = "subjectid")
+  left_join(tdvl_bl, by = "subjectid") %>% 
+  left_join(tdab_bl, by = "subjectid")
 
 
 

@@ -92,6 +92,7 @@ n_pct <-  function(data, var, group, level = 1) {
     summarise(n = n(),
               tot = n(), 
               .groups = "drop_last") %>% 
+    filter(!is.na(!!var)) %>% 
     group_by(!!group, .drop = TRUE) %>% 
     mutate(tot = sum(tot),
            pct = round(n/tot*100, digits = 1)) %>% 

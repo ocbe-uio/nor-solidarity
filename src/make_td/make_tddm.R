@@ -58,14 +58,6 @@ tdme <- raw %>%
   select( subjectid,  starts_with("me")) %>% 
   select(-ends_with("cd"))
 
-# Select out these from the CM dataset
-# C03 - diuretika, 
-# C10 - statiner, 
-# C07 - betablokkere, 
-# C09 - ACE-hemmere/ arb, 
-# C01 - hjerteterapi: glykosider, kardilaterende, antiarytmika, 
-# C08 - kalsiumantagonister, 
-# A10 - antidiabetika
 
 tdcm_bl <- tdcm %>% 
   filter(cmbl == "Yes" & l2code %in% c("C03", "C10", "C07", "C09",
