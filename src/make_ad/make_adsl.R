@@ -8,8 +8,6 @@
 library(tidyverse)
 library(lubridate)
 library(glue)
-library(readr)
-library(labelled)
 
 source("src/external/functions.R")
 
@@ -43,7 +41,7 @@ tmp <- tdsq %>%
   group_by(subjectid) %>% 
   summarise(tmp2 = min(sq_mort), .groups = "drop") 
 
-adsl <- tdds %>% select(-(oasympdt:oacodiag11)) %>% 
+adsl_all <- tdds %>% select(-(oasympdt:oacodiag11)) %>% 
   left_join(tddm %>% select(subjectid, age_calc, sex, dmini), by = "subjectid") %>% 
   left_join(tmp, by = "subjectid") %>%
   left_join(tdran %>% select(-randt), by= "subjectid") %>% 
@@ -67,8 +65,10 @@ adsl <- tdds %>% select(-(oasympdt:oacodiag11)) %>%
                                 fas_rem = "Included in FAS with remdesivir available?",
                                 fas_hcq = "Included in FAS with HCQ available?") %>% 
   select(-tmp2, -(eosyn:eosdtdat)) %>% 
-  filter(fas == "Yes") %>% 
   arrange(subjectid)
+
+adsl <- adsl_all %>% 
+  filter(fas == "Yes")
 
 ###############
 # Set up the pseudorandomisation list. 
@@ -96,4 +96,5 @@ if (pseudorand) {
   
 }
 
-write_rds(adsl, "data/ad/adsl.rds")
+readr::write_rds(adsl, "data/ad/adsl.rds")
+readr::write_rds(adsl_all, "data/ad/adsl_all.rds")
