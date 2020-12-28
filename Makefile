@@ -47,7 +47,7 @@ $(TDMISC): data/td/td_dummy ;
 
 data/td/td_dummy: data/raw/raw.rds data/td/tdran.rds src/external/functions.R src/make_td/make_tdmisc.R
 	Rscript src/make_td/make_tdmisc.R
-	touch data/td/td/td_dummy
+	touch data/td/td_dummy
 
 data/td/tddm.rds: data/raw/raw.rds data/td/tdds.rds src/external/functions.R src/make_td/make_tddm.R
 	Rscript src/make_td/make_tddm.R

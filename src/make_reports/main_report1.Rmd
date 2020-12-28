@@ -133,8 +133,6 @@ ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
 
 ```
 
-\newpage
-
 
 
 ```{r headers}
@@ -181,9 +179,12 @@ header_all <- adsl %>%
 ```
 
 
-#Patient flow
+# Patient flow
 
 ```{r patient-flow}
+
+adsl_all <- readr::read_rds("data/ad/adsl_all.rds")
+
 fas_table <- tribble(
   ~text, ~f, ~var, ~param,
   "Enrolled", "n_pct", "enrolled", list(level = "Yes"),
@@ -194,7 +195,7 @@ fas_table <- tribble(
   )
 
 fas_table %>%
-  mutate(data = list(adsl %>% mutate(tmp = "Enrolled")),
+  mutate(data = list(adsl_all %>% mutate(tmp = "Enrolled")),
          group = "tmp") %>%
   mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
@@ -206,7 +207,7 @@ fas_table %>%
 
 fas_table %>%
   filter(text != "Enrolled") %>%
-  mutate(data = list(adsl),
+  mutate(data = list(adsl_all),
          group = "rantrt") %>%
   mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
@@ -226,15 +227,13 @@ adsl %>%
          Total = `Standard of care (SOC)` + `Hydroxychloroquine + SOC` + `Remdesivir + SOC`) %>% 
   mutate(eosreas = if_else(is.na(eosreas), "Completed", eosreas)) %>% 
   rename(Reason = eosreas ) %>% 
-  knitr::kable()
+  knitr::kable(caption = "Patient flow during study (FAS)")
   
 
 ```
 
 
 # Demographics
-
-
 
 
 ```{r demographics, warning = FALSE, message = FALSE, results = 'asis', echo = FALSE}
