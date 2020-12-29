@@ -2,7 +2,10 @@
 title: "NOR-SOLIDARITY First Interim Report"
 author: "Inge Christoffer Olsen, PhD"
 date: '`r format(Sys.time(), "%d %B, %Y")` '
-output: word_document
+output:
+  word_document:
+    reference_docx: report_template.docx
+    toc: TRUE
 params:
   viedoc_export: ous_20201016_084109
   pseudorandom: TRUE
@@ -181,7 +184,7 @@ header_all <- adsl %>%
 
 # Patient flow
 
-```{r patient-flow}
+```{r patient-flow, warning = FALSE}
 
 adsl_all <- readr::read_rds("data/ad/adsl_all.rds")
 
@@ -397,8 +400,8 @@ mort_desc_f(fas_rem, caption = "Remdesivir (FAS)")
 
 
 ```
-## Mortality Estimates
-```{r mortres, results = "asis"}
+### Plots
+```{r mortres-plots}
 rdev <- read_rds("results/rds/rdev.rds")
 
 
@@ -409,6 +412,13 @@ rdev %>%
          walk(plot,print)) %>%
   invisible()
 
+```
+
+### Efficacy estimates
+
+```{r mortres-est}
+
+
 rdev %>%
    mutate(title = glue::glue("{fname}, {dname}")) %>%
   select(title, RR, pval) %>%
@@ -417,7 +427,9 @@ rdev %>%
 
 
 ```
-# Viral load
+
+
+## Viral load
 
 ```{r viral-load, results = "asis"}
 adsl <- readr::read_rds("data/ad/adsl.rds")
@@ -550,86 +562,61 @@ rdlv_margins(population = "fas_hcq") %>%
 
 ```
 
-#Dichotomous endpoints
+## Dichotomous endpoints
 
-## Hydroxychloroquine results
+### Descriptives
 
-```{r dich, results = "asis"}
 
- di_f <- function(
-                         var = "survcens",
-                         population = "fas") {
-  var_ <- ensym(var)
-  population <- ensym(population)
+```{r dich-desc, results = "asis"}
+
+rddi <- readr::read_rds("results/rds/rddi.rds")
+
+rddi_tbl <- function(data, pop, text, id) {
   
-  data <- addi %>%
-    filter(!!population == "Yes" ) %>%
-    mutate(rantrt = fct_drop(rantrt))
-    
-  
-  x <- glue::glue(
-    "
-tempfile tmp1
-tempfile tmp2
-
-
-logistic {var} i.rantrt
-margins i.rantrt, saving(`tmp1')
-margins r.rantrt, saving(`tmp2')
-
-
-use `tmp1', clear
-append using `tmp2', gen(type)
-
-"
-  )
-  
-  margins <-  stata(
-    src = x,
-    data.in = data,
-    data.out = TRUE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = FALSE
-  )
-  
-  res <- margins %>%
-    rename_with(~ str_replace(.x, "_", "")) %>%
-    select( margin, pvalue, ci_lb:type) %>%
-    select( rantrt = m1, margin,  ci_lb, ci_ub, pvalue, type) %>% 
-    mutate(across(margin:ci_ub, ~round(.x*100, digits = 1))) %>% 
-    mutate(pvalue = round(pvalue, digits = 3))
-  
-  return(res)
+  data %>%
+    filter(pop_text == pop) %>%
+    select(pop_text, Outcome = label, {{text}}, {{id}}) %>%
+    unnest(c({{text}}, {{id}})) %>%
+    pivot_wider(names_from = {{id}}, values_from = {{text}}) %>%
+    select(-pop_text) 
   
 }
 
-  
-addi <- adev %>% 
-  select(subjectid, starts_with("fas"), rantrt, starts_with("survcens"), starts_with("progression"), starts_with("mv"), starts_with("sq_admis_max")) %>% 
-  mutate(across(starts_with("survcens"), ~ if_else(.x == "No", 1, 0))) %>% 
-  mutate(across(starts_with("progression"), ~ if_else(.x == "Yes", 1, 0))) %>%
-  mutate(across(starts_with("mv"), ~ if_else(.x == "Yes", 1, 0))) %>% 
-  mutate(across(starts_with("sq_admis_max"), ~ if_else(.x == "ICU", 1, 0))) 
+rddi_tbl(rddi, "Hydroxychloroquine", desc_text, desc_id) %>% 
+  knitr::kable(caption = "Hydroxycholoquine")
+cat("Figures are number of patients with the outcome and percent (%)")
+
+rddi_tbl(rddi, "Remdesivir", desc_text, desc_id) %>% 
+  knitr::kable(caption = "Remdesivir")
+cat("Figures are number of patients with the outcome and percent (%)")
 
 
+```
 
-rddi <- tibble(population = c("fas_hcq", "fas_rem")) %>% 
-  crossing(var = c("survcens","survcens_60","survcens_28", "progression", 
-                   "progression28", "progression60", "mv", "mv28", "mv60", 
-                   "sq_admis_max", "sq_admis_max28", "sq_admis_max60")) %>% 
-  mutate(dires = map2(var, population, di_f)) 
+### Marginal probability estimates by treatment group and difference
 
-rddi %>% unnest(dires) %>% 
-  knitr::kable()
-  
+```{r dich-marg}
+hcq_m <- rddi_tbl(rddi,"Hydroxychloroquine", marglev, marglev_id)
+hcq_e <- rddi_tbl(rddi,"Hydroxychloroquine", margeff, margeff_id) 
+
+hcq_m %>% 
+  left_join(hcq_e, by = "Outcome") %>% 
+  knitr::kable(caption = "Hydroxychloroquine")
+
+rem_m <- rddi_tbl(rddi,"Remdesivir", marglev, marglev_id)
+rem_e <- rddi_tbl(rddi,"Remdesivir", margeff, margeff_id) 
+
+rem_m %>% 
+  left_join(rem_e, by = "Outcome") %>% 
+  knitr::kable(caption = "Remdesivir")
+
 
 ```
 
 
 
 
-# Inflammatory laboratory parameters
+## Inflammatory laboratory parameters
 
 
 
@@ -658,14 +645,35 @@ efflbres <- rdlb %>%
          title = glue::glue("{label}, {poptitle}"))
 
 
+```
+
+### Descriptives
+
+```{r efflbres-desc, results = "asis"}
 efflbres %>%
-  mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print),
-         marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
-         walk(marginsplot, print),
-         walk2(diffs, title,  ~knitr::kable(.x, caption = .y,
-                                            col.names = c("Treatment",
-                                                          "Days since randomisation",
-                                                          "Treatment difference",
+  mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print))  %>%
+  invisible()
+
+```
+
+### Plots
+
+```{r efflbres-plots, results = "asis"}
+efflbres %>%
+  mutate(marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
+         walk(marginsplot, print))  %>%
+  invisible()
+
+```
+
+### Efficacy estimates
+
+```{r efflbres-est, results = "asis"}
+efflbres %>%
+  mutate(walk2(diffs, title,  ~knitr::kable(.x, caption = .y,
+                                            col.names = c("Estimator",
+                                                          "Treatment",
+                                                          "Estimate",
                                                           "Lower 95% CL",
                                                           "Upper 95% CL",
                                                           "P-value"),
@@ -674,156 +682,79 @@ efflbres %>%
          )  %>%
   invisible()
 
-
-
-
 ```
 
 
-# SARS-CoV2 antibodies at day 90
+## SARS-CoV2 antibodies at day 90
 
-## Main results by quantreg
+### Descriptives
+```{r ab-desc, results = "asis"}
 
-```{r antibodies}
-library(quantreg) 
-library(broom)
-tdab <- read_rds("data/td/tdab.rds")
+rdab <- readr::read_rds("results/rds/rdab.rds")
 
-adab <- adsl %>% 
-  left_join(tdab %>% select(subjectid, studyday, absumctr, abrbd, abace2rbd ), by = "subjectid") %>% 
-  mutate(abnormrbd = abrbd/absumctr*100) %>% 
-  filter(studyday >65) %>% 
-  mutate(rantrt = factor(rantrt, ordered = FALSE))
-
-lreg_f <- function(var = "abrbd", population = "fas"){
-  # var <- ensym(var)
-  population <- ensym(population)
-
-  f.str <- paste0(var, " ~ rantrt")
-  data <- adab %>%
-    filter(!!population == "Yes") %>%
-    mutate(rantrt = fct_drop(rantrt))
-  #res <- rlang::qqshow(quantreg::rq(!!var ~ rantrt, data = data))
-  res <- lm(as.formula(f.str), data = data) %>%
-    tidy(conf.int = TRUE)
-
-  return(res)
-}
+rdab_tbl <- function(data, pop, text, id) {
   
-
-mreg_f <- function(var = "abrbd", population = "fas"){
-  # var <- ensym(var)
-  population <- ensym(population)
-
-  f.str <- paste0(var, " ~ rantrt")
-  data <- adab %>%
-    filter(!!population == "Yes") %>%
-    mutate(rantrt = fct_drop(rantrt))
-  #res <- rlang::qqshow(quantreg::rq(!!var ~ rantrt, data = data))
-  res <- suppressWarnings(quantreg::rq(as.formula(f.str), data = data)) %>%
-    tidy(se = "boot", conf.int = TRUE, R=20000)
-
-  return(res)
+  data %>%
+    filter(pop_text == pop) %>%
+    select(seq, pop_text, Outcome = label, {{text}}, {{id}}) %>%
+    unnest(c({{text}}, {{id}})) %>%
+    pivot_wider(names_from = {{id}}, values_from = {{text}}) %>%
+    select(-pop_text) 
+  
 }
 
-rdab <- tibble(
-  population = c("fas_hcq", "fas_rem")
-  ) %>%
-  crossing(var = c("abrbd", "abnormrbd", "abace2rbd")) %>%
-  mutate(res_m = map2(var, population, mreg_f),
-         res_l = map2(var, population, lreg_f)) 
-
-rdab %>%
-  select(-res_l) %>% 
-  unnest(res_m) %>%  
-  knitr::kable(digits = 3)
-
-
+rdab_dtbl <- function(pop){
   
+rdab_tbl(rdab, pop, mean_text, id) %>%
+  mutate(Statistic = "Mean (SD)") %>% 
+  add_row(rdab_tbl(rdab, pop, median_text, id) %>% 
+            mutate(Statistic = "Median (IQR)")) %>%
+  select(Outcome, Statistic, everything()) %>% 
+  arrange(seq, Statistic) %>% 
+  group_by(seq) %>% 
+  mutate(Outcome = if_else(row_number() == 1, Outcome, "")) %>% 
+  ungroup() %>% 
+  select(-seq) %>% 
+  knitr::kable(caption = pop)
 
+}
+
+rdab_dtbl("Hydroxychloroquine")
+
+rdab_dtbl("Remdesivir")
+
+```
+
+### Marginal probability estimates by treatment group and difference
+
+```{r ab-marg, results = "asis"}
+hcq_m <- rdab_tbl(rdab,"Hydroxychloroquine", marglev, marglev_id)
+hcq_e <- rdab_tbl(rdab,"Hydroxychloroquine", margeff, margeff_id) 
+
+hcq_m %>% 
+  left_join(hcq_e, by = "Outcome") %>% 
+  select(-starts_with("seq")) %>% 
+  knitr::kable(caption = "Hydroxychloroquine")
+cat("Estimates are presented with 95% confidence limits")
+
+
+rem_m <- rdab_tbl(rdab,"Remdesivir", marglev, marglev_id)
+rem_e <- rdab_tbl(rdab,"Remdesivir", margeff, margeff_id) 
+
+rem_m %>% 
+  left_join(rem_e, by = "Outcome") %>% 
+  select(-starts_with("seq")) %>% 
+  knitr::kable(caption = "Remdesivir")
+cat("Estimates are presented with 95% confidence limits")
 
 ```
 
 
-## HCQ results from Stata
-
-```{r antibodies-hcq}
 
 
- stata_qreg <-
-    "
-qreg abrbd i.rantrt
-qreg abnormrbd i.rantrt
-qreg abace2rbd i.rantrt
+## Time to last discharge
 
-"
-
-  stata(
-    src = stata_qreg,
-    data.in = adab %>% filter(fas_hcq == "Yes"),
-    data.out = FALSE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = TRUE
-  )
-
-
-  
-  
-
-
-```
-
-## Remdesivir results by Stata
-
-```{r antibodies-remdesivir}
-
- stata(
-    src = stata_qreg,
-    data.in = adab %>% filter(fas_hcq == "Yes"),
-    data.out = FALSE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = TRUE
-  )
-
-
-```
-
-
-## Sensitivity results by ANOVA
-
-```{r antibodies-sensitivity}
-
-
-rdab %>%
-  select(-res_m) %>% 
-  unnest(res_l) %>%  
-  knitr::kable(digits = 3)
-
-
-```
-
-# Time to last discharge
-
-## Remdesivir
-
-```{r discharge-rem}
-library(survival)
-library(survminer)
-adev_rem <- adev %>% filter(fas_rem == "Yes")
-fit_rem  <- surv_fit(Surv(dischargeday, dischargecens == "No") ~ rantrt, 
-                      data = adev_rem)
-
-ggsurvplot(fit_rem, data = adev_rem, fun = "event")
-
-fit_rem_28  <- surv_fit (Surv(dischargeday_28, dischargecens_28 == "No") ~ rantrt, 
-                      data = adev_rem)
-
-ggsurvplot(fit_rem_28, data = adev_rem, fun = "event")
-
-```
-## HCQ
+### HCQ
 
 ```{r discharge-hcq}
 library(survival)
@@ -832,14 +763,36 @@ adev_hcq <- adev %>% filter(fas_hcq == "Yes")
 fit_hcq  <- surv_fit(Surv(dischargeday, dischargecens == "No") ~ rantrt, 
                       data = adev_hcq)
 
-ggsurvplot(fit_hcq, data = adev_hcq, fun = "event")
+ggsurvplot(fit_hcq, data = adev_hcq, fun = "event", pval = TRUE)
 
 fit_hcq_28  <- surv_fit (Surv(dischargeday_28, dischargecens_28 == "No") ~ rantrt, 
                       data = adev_hcq)
 
-ggsurvplot(fit_hcq_28, data = adev_hcq, fun = "event")
+ggsurvplot(fit_hcq_28, data = adev_hcq, fun = "event", pval = TRUE)
 
 ```
+
+### Remdesivir
+
+```{r discharge-rem}
+library(survival)
+library(survminer)
+adev_rem <- adev %>% filter(fas_rem == "Yes") 
+fit_rem  <- surv_fit(Surv(dischargeday, dischargecens == "No") ~ rantrt, 
+                      data = adev_rem)
+
+# survdiff(Surv(dischargeday, dischargecens == "No") ~ rantrt, 
+#                       data = adev_rem)
+
+ggsurvplot(fit_rem, data = adev_rem, fun = "event", pval = TRUE)
+
+fit_rem_28  <- surv_fit (Surv(dischargeday_28, dischargecens_28 == "No") ~ rantrt, 
+                      data = adev_rem)
+
+ggsurvplot(fit_rem_28, data = adev_rem, fun = "event", pval = TRUE)
+
+```
+
 
 # Adverse Events
 
@@ -953,44 +906,4 @@ adae_fas %>%
 
 ```
 
-<!-- # Mortality and other outcomes by admission state -->
-
-<!-- ```{r} -->
-<!-- adeff %>% -->
-<!--   group_by(sq_admis, outcome) %>% -->
-<!--   summarise(n = n(), .groups = "drop_last") %>% -->
-<!--   group_by(sq_admis) %>% -->
-<!--   mutate(tot = sum(n), -->
-<!--            pct = round(n/tot*100,digits = 1)) %>% -->
-<!--   mutate(txt = paste0(n, " (", pct, "%)")) %>% -->
-<!--   ungroup %>% -->
-<!--   select(-(n:pct)) %>% -->
-<!--   pivot_wider(values_from = txt, names_from = sq_admis) %>% -->
-<!--   knitr::kable( booktabs = TRUE, caption = "Outcome") -->
-
-<!-- ``` -->
-
-
-
-
-<!-- # Outcome -->
-
-<!-- The following report is based on pseudo-randomised groups, not true allocations. The true allocations are available for the DMC only. -->
-
-<!-- ```{r outcome} -->
-
-<!-- adeff %>% -->
-<!--   mutate(rantrt = sample(rantrt, n(), replace = FALSE)) %>% #Delete this row for true allocations -->
-<!--   group_by(rantrt, outcome) %>% -->
-<!--   summarise(n = n(), .groups = "drop_last") %>% -->
-<!--   group_by(rantrt) %>% -->
-<!--   mutate(tot = sum(n), -->
-<!--            pct = round(n/tot*100,digits = 1)) %>% -->
-<!--   mutate(txt = paste0(n, " (", pct, "%)")) %>% -->
-<!--   ungroup %>% -->
-<!--   select(-(n:pct)) %>% -->
-<!--   pivot_wider(values_from = txt, names_from = rantrt) %>% -->
-<!--   knitr::kable(col.names = c("Parameter", header), booktabs = TRUE, caption = "Outcome") -->
-
-
-<!-- ``` -->
+END

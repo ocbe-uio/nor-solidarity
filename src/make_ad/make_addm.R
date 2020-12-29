@@ -21,6 +21,7 @@ adsl <- readr::read_rds("data/ad/adsl.rds")
 tdvs <- readr::read_rds("data/td/tdvs.rds")
 tdrc <- readr::read_rds("data/td/tdrc.rds")
 tdvl <- readr::read_rds("data/td/tdvl.rds")
+tdab <- readr::read_rds("data/td/tdab.rds")
 
 tdvl_bl <- tdvl %>% 
   filter(studyday %in% c(-3:1) & 
@@ -32,7 +33,7 @@ tdvl_bl <- tdvl %>%
 
 tdab_bl <- tdab %>% 
   filter(studyday == 1) %>% 
-  mutate(abzeroc = if_else(RBD <= 5, "Yes", "No")) %>% 
+  mutate(abzeroc = if_else(abrbd <= 5, "Yes", "No")) %>% 
   select(subjectid, abzeroc) %>% 
   set_variable_labels(abzeroc = "Zero converted (RBD ≤ 5)?")
 

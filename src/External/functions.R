@@ -179,3 +179,28 @@ ae_N_n_pct <-  function(data, var, group, level = 1) {
 stats_exec <- function(f, data, var, group, ...){
   rlang::exec(f, data, var, group, !!!(...))
 }
+
+
+plot_cont_margins <- function(data, ytitle = "Value") {
+  data %>%
+    gf_line(
+      margin ~ studyday,
+      color = ~ rantrt,
+      group = ~ rantrt,
+      position = position_dodge(0.4),
+      size = 1
+    ) %>%
+    gf_point(position = position_dodge(0.4)) %>%
+    gf_errorbar(
+      ci_lb + ci_ub ~ studyday,
+      color = ~ rantrt,
+      width = .8,
+      position = position_dodge(0.4)
+    ) %>%
+    gf_labs(x = "Study day",
+            y = str2expression(ytitle),
+            color = "Treatment") %>%
+    gf_theme(theme_classic())
+  
+}
+

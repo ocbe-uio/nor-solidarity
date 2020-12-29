@@ -47,10 +47,10 @@ survtime <- tdds %>%
     survcens = if_else(is.na(eosdtdat), "Yes", "No"), 
     survtime_60 = if_else(survtime <= 60, survtime, 60),
     survcens_60 = if_else(survtime <= 60, survcens, "Yes"),
-    survtime_60 = if_else(survcens == "Yes", survtime_60, 60), 
+    #survtime_60 = if_else(survcens == "Yes", survtime_60, 60), 
     survtime_28 = if_else(survtime <= 28, survtime, 28),
     survcens_28 = if_else(survtime <= 28, survcens, "Yes"),
-    survtime_28 = if_else(survcens == "Yes", survtime_28, 28), 
+    #survtime_28 = if_else(survcens == "Yes", survtime_28, 28) 
   ) %>% 
   select(subjectid, survtime, survcens, survtime_60, survcens_60, survtime_28, survcens_28)
 
@@ -110,11 +110,11 @@ adev <- adsl %>%
   dischargeday = case_when(
     !is.na(dischargeday) ~ dischargeday,
     is.na(dischargeday) & survcens == "Yes" ~ survtime,
-    is.na(dischargeday) & survcens == "No" ~ Inf
+    is.na(dischargeday) & survcens == "No" ~ dblockdate - randt
   ),
   dischargeday_28 = if_else(dischargeday <= 28, dischargeday, 28),
   dischargecens_28 = if_else(dischargeday <= 28, dischargecens, "Yes"),
-  dischargeday_28 = if_else(dischargecens == "No", dischargeday_28, if_else(dischargeday<=28, dischargeday, 28))
+  #dischargeday_28 = if_else(dischargecens == "No", dischargeday_28, if_else(dischargeday<=28, dischargeday, 28))
   ) %>% 
   filter(eventid == "V00") %>%
   select(-studyday, -(eventid:rcwhostate), -starts_with("ranavail"), -(dmicdat:dmini), -(enrolled:fasex2)) %>% 
