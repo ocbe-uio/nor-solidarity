@@ -133,8 +133,6 @@ ggplot(data=., aes(x = rantrt, y = n, fill = rantrt)) +
 
 ```
 
-\newpage
-
 
 
 ```{r headers}
@@ -181,9 +179,15 @@ header_all <- adsl %>%
 ```
 
 
-#Patient flow
+# Patient flow
 
-```{r patient-flow}
+
+
+```{r patient-flow, message = FALSE}
+
+adsl_all <- readr::read_rds("data/ad/adsl_all.rds") 
+tdds <- readr::read_rds("data/td/tdds.rds") 
+
 fas_table <- tribble(
   ~text, ~f, ~var, ~param,
   "Enrolled", "n_pct", "enrolled", list(level = "Yes"),
@@ -194,7 +198,7 @@ fas_table <- tribble(
   )
 
 fas_table %>%
-  mutate(data = list(adsl %>% mutate(tmp = "Enrolled")),
+  mutate(data = list(adsl_all %>% mutate(tmp = "Enrolled")),
          group = "tmp") %>%
   mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
@@ -206,7 +210,7 @@ fas_table %>%
 
 fas_table %>%
   filter(text != "Enrolled") %>%
-  mutate(data = list(adsl),
+  mutate(data = list(adsl_all),
          group = "rantrt") %>%
   mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
   mutate(id = map(res,names)) %>%
@@ -226,7 +230,7 @@ adsl %>%
          Total = `Standard of care (SOC)` + `Hydroxychloroquine + SOC` + `Remdesivir + SOC`) %>% 
   mutate(eosreas = if_else(is.na(eosreas), "Completed", eosreas)) %>% 
   rename(Reason = eosreas ) %>% 
-  knitr::kable()
+  knitr::kable(caption = "Patient flow after randomisation (FAS)")
   
 
 ```
@@ -399,7 +403,9 @@ mort_desc_f(fas_rem, caption = "Remdesivir (FAS)")
 
 ```
 
-```{r mortres}
+### Plots
+
+```{r mortres-plots}
 rdev <- read_rds("results/rds/rdev.rds")
 
 
@@ -409,6 +415,13 @@ rdev %>%
          plot = map2(plot, title, ~ .x + ggtitle(.y)),
          walk(plot,print)) %>%
   invisible()
+
+```
+
+### Efficacy estimates
+
+```{r mortres-est}
+
 
 rdev %>%
    mutate(title = glue::glue("{fname}, {dname}")) %>%
@@ -421,80 +434,12 @@ rdev %>%
 
 
 
-```{r efflbres, results = "asis", echo = FALSE}
-rdlb <- read_rds("results/rds/rdlb.rds")
-
-
-
-plot_cont_margins <- function(data, ytitle = "Value") {
-  data %>%
-    gf_line(
-      margin ~ studyday,
-      color = ~ rantrt,
-      group = ~ rantrt,
-      position = position_dodge(0.4),
-      size = 1
-    ) %>%
-    gf_point(position = position_dodge(0.4)) %>%
-    gf_errorbar(
-      ci_lb + ci_ub ~ studyday,
-      color = ~ rantrt,
-      width = .8,
-      position = position_dodge(0.4)
-    ) %>%
-    gf_labs(x = "Study day",
-            y = str2expression(ytitle),
-            color = "Treatment") %>%
-    gf_theme(theme_classic())
-
-}
-
-
-lables <- rdlb %>% 
-  select(var) %>% 
-  distinct() %>% 
-  mutate(label =case_when(
-    var == "lbcrpres" ~  "CRP (mg/L)",
-    var == "lbferres" ~  "Ferritin (µg/L)",
-    var == "lbldres" ~   "LDH (U/L)",    
-    var == "lblymres" ~  "Lymphocytes (x10^9/L)",
-    var == "lbneures" ~  "Neutrophils (x10^9/L)",
-    var == "lbprores" ~  "Procalcitonin (µg/L)",
-  ))
-
-efflbres <- rdlb %>%
-  select(-label) %>% 
-  full_join(lables, by="var") %>% 
-  mutate(poptitle = if_else(population == "fas_hcq", "HCQ", "Remdesivir")) %>% 
-  mutate(marginsplot = pmap(list(data = margins, ytitle = label), plot_cont_margins),
-         title = glue::glue("{label}, {poptitle}"))
-
-
-efflbres %>%
-  mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print),
-         marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
-         walk(marginsplot, print),
-         walk2(diffs, title,  ~knitr::kable(.x, caption = .y,
-                                            col.names = c("Treatment",
-                                                          "Days since randomisation",
-                                                          "Treatment difference",
-                                                          "Lower 95% CL",
-                                                          "Upper 95% CL",
-                                                          "P-value"),
-                                            digits = 3) %>%
-                 print)
-         )  %>%
-  invisible()
-
-
-
-
-```
-# Viral load
+## Viral load
 
 ```{r viral-load, results = "asis"}
 adsl <- readr::read_rds("data/ad/adsl.rds")
 tdvl<- readr::read_rds("data/td/tdvl.rds")
+source("src/make_rd/stata.R")
 
 rdlv_margins <- function(data = advl,
                            var = "vllog10cpkc_imp",
@@ -594,6 +539,73 @@ rdlv_margins(population = "fas_hcq") %>%
 
 
 ```
+
+## Inflammatory laboratory parameters
+
+
+```{r efflbres, results = "asis"}
+
+rdlb <- read_rds("results/rds/rdlb.rds")
+
+
+lables <- rdlb %>% 
+  select(var) %>% 
+  distinct() %>% 
+  mutate(label =case_when(
+    var == "lbcrpres" ~  "CRP (mg/L)",
+    var == "lbferres" ~  "Ferritin (µg/L)",
+    var == "lbldres" ~   "LDH (U/L)",    
+    var == "lblymres" ~  "Lymphocytes (x10^9/L)",
+    var == "lbneures" ~  "Neutrophils (x10^9/L)",
+    var == "lbprores" ~  "Procalcitonin (µg/L)",
+  ))
+
+efflbres <- rdlb %>%
+  select(-label) %>% 
+  full_join(lables, by="var") %>% 
+  mutate(poptitle = if_else(population == "fas_hcq", "HCQ", "Remdesivir")) %>% 
+  mutate(marginsplot = pmap(list(data = margins, ytitle = label), plot_cont_margins),
+         title = glue::glue("{label}, {poptitle}"))
+
+```
+
+### Descriptives
+
+```{r efflbres-desc, results = "asis"}
+efflbres %>%
+  mutate(walk2(descriptives, title, ~knitr::kable(.x, caption = .y) %>% print))  %>%
+  invisible()
+
+```
+
+### Plots
+
+```{r efflbres-plots, results = "asis"}
+efflbres %>%
+  mutate(marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
+         walk(marginsplot, print))  %>%
+  invisible()
+
+```
+
+### Efficacy estimates
+
+```{r efflbres-est, results = "asis"}
+efflbres %>%
+  mutate(walk2(diffs, title,  ~knitr::kable(.x, caption = .y,
+                                            col.names = c("Treatment",
+                                                          "Days since randomisation",
+                                                          "Treatment difference",
+                                                          "Lower 95% CL",
+                                                          "Upper 95% CL",
+                                                          "P-value"),
+                                            digits = 3) %>%
+                 print)
+         )  %>%
+  invisible()
+
+```
+
 
 
 
