@@ -6,9 +6,9 @@ MAIN_REPORT1 = $(DATE)_Nor-Solidarity_Main_Report1.docx
 RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
 TDMISC = data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdcm.rds data/td/tdds.rds
 TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds data/td/tdlb.rds data/td/tdvl.rds data/td/tdab.rds
-ADMISC = data/ad/adab.rds
-AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adeff.rds data/ad/adex.rds data/ad/addm.rds data/ad/adev.rds $(ADMISC)
-RD = results/rds/rdev.rds results/rds/rdlb.rds results/rds/rddi.rds results/rds/rdab.rds
+ADMISC = data/ad/adab.rds data/ad/advl.rds data/ad/adrc.rds 
+AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adex.rds data/ad/addm.rds data/ad/adev.rds $(ADMISC)
+RD = results/rds/rdev.rds results/rds/rdlb.rds results/rds/rddi.rds results/rds/rdab.rds results/rds/rdvlrf.rds 
 
 # Set this to FALSE when for the true results.  
 PSEUDORANDOM = TRUE
@@ -79,9 +79,6 @@ data/ad/adex.rds: data/td/tdex.rds data/ad/adsl.rds src/make_ad/make_adex.R
   
 data/ad/adae.rds: data/td/tdae.rds data/ad/adsl.rds src/make_ad/make_adae.R
 	Rscript src/make_ad/make_adae.R
-  
-data/ad/adeff.rds: data/td/tdds.rds data/ad/adsl.rds src/make_ad/make_adeff.R
-	Rscript src/make_ad/make_adeff.R
 
 data/ad/adev.rds: data/td/tdds.rds  data/td/tdrc.rds data/ad/adsl.rds data/td/tdsq.rds src/make_ad/make_adev.R
 	Rscript src/make_ad/make_adev.R $(DATE)
@@ -89,7 +86,7 @@ data/ad/adev.rds: data/td/tdds.rds  data/td/tdrc.rds data/ad/adsl.rds data/td/td
 $(ADMISC): data/ad/ad_dummy ;	
 #Dummy file to be able to update all ADMISC files in one run
 
-data/ad/ad_dummy: data/td/tdab.rds data/ad/adsl.rds src/make_ad/make_admisc.R
+data/ad/ad_dummy: data/td/tdab.rds data/ad/adsl.rds data/td/tdvl.rds data/td/tdrc.rds src/make_ad/make_admisc.R
 	Rscript src/make_ad/make_admisc.R
 	touch data/ad/ad_dummy
 	
@@ -108,6 +105,9 @@ results/rds/rddi.rds: data/ad/adev.rds src/make_rd/make_rddi.R src/External/func
 	
 results/rds/rdab.rds: data/ad/adab.rds src/make_rd/make_rdab.R src/External/functions.R
 	Rscript src/make_rd/make_rdab.R
+
+results/rds/rdvlrf.rds: data/ad/advl.rds data/ad/adrc.rds src/make_rd/make_rdvlrf.R src/make_rd/stata.R
+	Rscript src/make_rd/make_rdvlrf.R
 	
 ##############################
 # Make reports

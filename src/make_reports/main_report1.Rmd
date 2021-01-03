@@ -289,7 +289,7 @@ dm_table <- tribble(
   "**Viral count**", "empty", "", list(),
   "  Viral count (log~10~ counts/1000 cells)", "mean_sd", "vllog10cpkc", list(digits = 1),
   "**Anti-SARS-CoV-2 Antibodies**", "empty", "", list(),
-  "  Zero converted (RBD ≤ 5)", "n_pct", "abzeroc", list(level = "Yes"),
+  "  Sero converted (RBD ≤ 5)", "n_pct", "abseroc", list(level = "Yes"),
   "**Supplementary baseline information**", "empty", "", list(),
   "  Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
   "  Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0),
@@ -431,136 +431,70 @@ rdev %>%
 
 ## Viral load
 
-```{r viral-load, results = "asis"}
-adsl <- readr::read_rds("data/ad/adsl.rds")
-tdvl<- readr::read_rds("data/td/tdvl.rds")
+### Plots
 
-source("src/make_rd/stata.R")
+```{r vl-plots, results = "asis", warning = FALSE}
 
-rdlv_margins <- function(data = advl,
-                           var = "vllog10cpkc_imp",
-                           population = "fas") {
-  var_ <- ensym(var)
-  population <- ensym(population)
+rdvlrf <- readr::read_rds("results/rds/rdvlrf.rds")
+
+rdvlrf %>%
+  filter(seq == 1) %>% 
+  mutate(walk(plot1, plot)) %>% 
+  invisible()
+
+rdvlrf %>%
+  filter(seq == 1) %>% 
+  mutate(walk(plot2, plot)) %>% 
+  invisible()
   
-  data <- data %>%
-    filter(!!population == "Yes" &
-             studyday %in% c(-3:15) &
-             vlsource %in% c("Labfile only", "Both")) %>%
-    mutate(rantrt = fct_drop(rantrt),
-           marginset = if_else(studyday %in% c(0, 4 , 8, 15), studyday, NA_real_)) 
   
-  x <- glue::glue(
-    "
-    
-mkspline time_1 4 time_2 8 time_3 = studyday
-mkspline time1 7 time2  = studyday
+```
 
-tempfile tmp1
-tempfile tmp2
-tempfile tmp3
+### Marginal probability estimates by treatment group and difference
 
-mixed {var} i.rantrt##c.(time_1 time_2 time_3)  || subjectid: studyday, covariance(unstructured)
-margins i.rantrt, over(marginset) saving(`tmp1')
+```{r vl-estimates, results = "asis"}
 
-mixed {var} i.rantrt##c.(time1 time2)  || subjectid: studyday, covariance(unstructured)
-margins i.rantrt, dydx(time1) saving(`tmp2')
-margins r.rantrt, dydx(time1) saving(`tmp3')
+rdvlrf %>% 
+  filter(seq == 1) %>% 
+  pull(table) %>% 
+  walk(print) %>% 
+  invisible()
 
-use `tmp1', clear
-append using `tmp2' `tmp3' , gen(analysis)
-
-"
-  )
-  
-  margins <-  stata(
-    src = x,
-    data.in = data,
-    data.out = TRUE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = FALSE
-  )
-  
-  res <- margins %>%
-    rename_all(~ str_replace(., "_", "")) %>%
-    select(rantrt = m1 , studyday = by1, margin, ci_lb, ci_ub, pvalue, analysis) 
-
-  
-  return(res)
-  
-}
-
-
-
-plot_cont_margins <- function(data, ytitle = "Value") {
-  data %>%
-    gf_line(
-      margin ~ studyday,
-      color = ~ rantrt,
-      group = ~ rantrt,
-      position = position_dodge(0.4),
-      size = 1
-    ) %>%
-    gf_point(position = position_dodge(0.4)) %>%
-    gf_errorbar(
-      ci_lb + ci_ub ~ studyday,
-      color = ~ rantrt,
-      width = .8,
-      position = position_dodge(0.4)
-    ) %>%
-    gf_labs(x = "Study day",
-            y = str2expression(ytitle),
-            color = "Treatment") %>%
-    gf_theme(theme_classic())
-
-}
-
-
-
-advl <- adsl %>% 
-  left_join(tdvl, by = c("subjectid")) %>% 
-  mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0)) 
-
-
-rdlv_margins(population = "fas_rem") %>% 
-  filter(analysis == 0) %>% 
-  plot_cont_margins(ytitle = "Viral~load~(log[10]~copies~per~1000~cells)") 
-  
-
-rdlv_margins(population = "fas_rem") %>% 
-  filter(analysis != 0) %>% 
-  mutate(Explanation = if_else(analysis == 1, "Slope by treatment", "Difference in slope")) %>% 
-  select(-analysis) %>%
-  select(rantrt, Explanation, margin, ci_lb, ci_ub, pvalue) %>% 
-  knitr::kable(col.names = c("Treatment",
-                             "Explanation",
-                              "Estimate",
-                              "Lower 95% CL",
-                              "Upper 95% CL",
-                              "P-value"),
-               digits = 3, caption = "Estimated treatment effect, Remdesivir")
-
-rdlv_margins(population = "fas_hcq") %>% 
-  filter(analysis == 0) %>% 
-  plot_cont_margins(ytitle = "Viral~load~(log[10]~copies~per~1000~cells)") 
-  
-
-rdlv_margins(population = "fas_hcq") %>% 
-  filter(analysis != 0) %>% 
-  mutate(Explanation = if_else(analysis == 1, "Slope by treatment", "Difference in slope")) %>% 
-  select(-analysis) %>%
-  select(rantrt, Explanation, margin, ci_lb, ci_ub, pvalue) %>% 
-  knitr::kable(col.names = c("Treatment",
-                             "Explanation",
-                              "Estimate",
-                              "Lower 95% CL",
-                              "Upper 95% CL",
-                              "P-value"),
-               digits = 3, caption = "Estimated treatment effect, HCQ")
 
 
 ```
+
+## Respiratory failure by pO2/FiO2-ratio
+
+### Plots
+
+```{r rf-plots, results = "asis", warning = FALSE}
+
+rdvlrf %>%
+  filter(seq == 2) %>% 
+  mutate(walk(plot1, plot)) %>% 
+  invisible()
+  
+rdvlrf %>%
+  filter(seq == 2) %>% 
+  mutate(walk(plot2, plot)) %>% 
+  invisible()
+
+```
+
+### Marginal probability estimates by treatment group and difference
+
+```{r rf-estimates, results = "asis"}
+
+rdvlrf %>% 
+  filter(seq == 2) %>% 
+  pull(table) %>% 
+  walk(print) %>% 
+  invisible()
+
+```
+
+
 
 ## Dichotomous endpoints
 
