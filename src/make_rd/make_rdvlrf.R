@@ -142,11 +142,6 @@ label <- tibble(var = c("vllog10cpkc_imp", "rcratio"),
                 seq = 1:2)
 
 
-advl <- advl %>% 
-  filter(studyday %in% c(-3:15) &
-           vlsource %in% c("Labfile only", "Both")) 
-
-# margins_f(advl)
 
 adpf <- adrc %>%
   filter(studyday %in% c(-1:15))

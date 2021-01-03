@@ -464,6 +464,72 @@ rdvlrf %>%
 
 ```
 
+## Viral load subgroup analyses
+
+### Plots, Hydroxychloroquine
+
+```{r vl-sg-plots-hcq, results = "asis", warning = FALSE}
+
+rdvl_sg <- readr::read_rds("results/rds/rdvl_sg.rds")
+
+rdvl_sg %>%
+  filter(population == "fas_hcq") %>% 
+  mutate(walk(plot1, plot)) %>% 
+  invisible()
+
+rdvl_sg %>%
+  filter(population == "fas_hcq") %>% 
+  mutate(walk(plot2, plot)) %>% 
+  invisible()
+  
+```
+
+### Marginal probability estimates by treatment group and difference Hydroxychloroquine
+
+```{r vl-sg-estimates-hcq, results = "asis"}
+
+rdvl_sg %>% 
+  filter(population == "fas_hcq") %>% 
+  pull(table) %>% 
+  walk(print) %>% 
+  invisible()
+
+```
+
+### Plots Remdesivir
+
+```{r vl-sg-plots-rem, results = "asis", warning = FALSE}
+
+rdvl_sg <- readr::read_rds("results/rds/rdvl_sg.rds")
+
+rdvl_sg %>%
+  filter(population =="fas_rem") %>% 
+  mutate(walk(plot1, plot)) %>% 
+  invisible()
+
+rdvl_sg %>%
+  filter(population == "fas_rem") %>% 
+  mutate(walk(plot2, plot)) %>% 
+  invisible()
+  
+```
+
+
+
+### Marginal probability estimates by treatment group and difference Remdesivir
+
+```{r vl-sg-estimates-rem, results = "asis"}
+
+rdvl_sg %>% 
+  filter(population == "fas_rem") %>% 
+  pull(table) %>% 
+  walk(print) %>% 
+  invisible()
+
+```
+
+
+
 ## Respiratory failure by pO2/FiO2-ratio
 
 ### Plots

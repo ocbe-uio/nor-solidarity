@@ -157,7 +157,7 @@ rdvl_sg <-  tibble(population = c("fas_hcq", "fas_rem"),
          table = map2(margins, pop_text, sg_table)
          )
   
-write_rds(rdvl_sg, "results/rd/rdvl_sg.rds")
+write_rds(rdvl_sg, "results/rds/rdvl_sg.rds")
 
   
 

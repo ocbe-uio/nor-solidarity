@@ -35,9 +35,10 @@ tdvl_bl <- tdvl %>%
 
 tdab_bl <- tdab %>% 
   filter(studyday == 1) %>% 
-  mutate(abseroc = if_else(abrbd < 5, "Yes", "No")) %>% 
+  mutate(abseroc = if_else(abrbd < 5, "RBD < 5", "RBD ≥ 5"),
+         abseroc = factor(abseroc)) %>% 
   select(subjectid, abseroc) %>% 
-  set_variable_labels(abseroc = "Seroconverted (RBD < 5)?")
+  set_variable_labels(abseroc = "Seroconverted (RBD ≥ 5)")
 
 
 addm <- adsl %>% select(-age_calc,  -sex) %>% 
