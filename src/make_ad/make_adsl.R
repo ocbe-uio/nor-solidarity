@@ -78,19 +78,20 @@ print(paste0("Pseudorandomisation is ", pseudorand))
 if (pseudorand) {
   
   varlabels <- labelled::var_label(adsl, unlist = TRUE)
+  varorder <- names(adsl)
   
   adsl2 <- adsl %>%
     select(subjectid, rantrt:fas_hcq) %>% 
     group_by(subjectid) %>% 
     nest() %>% 
     ungroup() %>% 
-    mutate(subjectid = sample(subjectid,n(), replace = FALSE)) %>% 
+    mutate(subjectid = sample(subjectid, n(), replace = FALSE)) %>% 
     unnest(data) 
   
   adsl <- adsl %>% 
-    select(-(rantrt:fas_hcq)) %>% 
+    select(- (rantrt:fas_hcq)) %>% 
     left_join(adsl2, by = "subjectid") %>% 
-    relocate(randt, .after = dmicdat)
+    relocate(varorder)
   
   labelled::var_label(adsl) <- varlabels
   

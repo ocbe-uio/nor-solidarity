@@ -114,19 +114,19 @@ tempfile tmp4
 
 
 mkspline time_1 7 time_2 = studyday
-gen day14 = studyday == 14
+gen day10 = studyday == 10
 
 quietly {model} {var}  i.rantrt##c.(time_1 time_2)  || subjectid: {options}
 margins i.rantrt, dydx(time_1) saving(`tmp1')
 margins r.rantrt, dydx(time_1) saving(`tmp2')
-margins i.rantrt, subpop(day14) saving(`tmp3')
-margins r.rantrt, subpop(day14) saving(`tmp4')
+margins i.rantrt, subpop(day10) saving(`tmp3')
+margins r.rantrt, subpop(day10) saving(`tmp4')
 
 use `tmp1', clear
 append using `tmp2' `tmp3' `tmp4', gen(typec)
 
 gen typen = typec
-label def typec 0 \"Slope 1st week by treatment\" 1 \"Difference in 1st week slope\" 2 \"Day 14 level by treatment\" 3 \"Day 14 treatment difference\"
+label def typec 0 \"Slope 1st week by treatment\" 1 \"Difference in 1st week slope\" 2 \"Day 10 level by treatment\" 3 \"Day 10 treatment difference\"
 label val typec typec
 "
   )

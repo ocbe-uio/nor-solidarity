@@ -54,13 +54,9 @@ tdvl <- raw %>%
   rename(vlnasyn = bbnasyn,  vlsampledt = bbnasdt, vllocal = bblocal ) %>% 
   mutate(vlsource = factor(vlsource)) %>% 
   mutate(vlsampledt = lubridate::as_date(vlsampledt)) %>% 
-  left_join(tdran %>% select(subjectid, randt), by = "subjectid") %>% 
-  mutate(studyday = vlsampledt - randt) %>% 
   set_variable_labels(vlsampledt = "Sample date", 
                       vllocal = "Sample localization", 
-                      vlsource = "Source",
-                      studyday = "Sample date relative to randomisation date") 
-
+                      vlsource = "Source")
 
 
   

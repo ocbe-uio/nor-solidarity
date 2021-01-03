@@ -24,7 +24,9 @@ tdvl <- readr::read_rds("data/td/tdvl.rds")
 tdab <- readr::read_rds("data/td/tdab.rds")
 
 tdvl_bl <- tdvl %>% 
-  filter(studyday %in% c(-3:1) & 
+  left_join(adsl %>% select(subjectid, bldt), by = "subjectid") %>% 
+  mutate(studyday = vlsampledt - bldt) %>% 
+  filter(studyday %in% c(-3:0) & 
            vlsource %in% c("Labfile only", "Both")) %>% 
   mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0)) %>% 
   group_by(subjectid) %>% 
@@ -33,9 +35,9 @@ tdvl_bl <- tdvl %>%
 
 tdab_bl <- tdab %>% 
   filter(studyday == 1) %>% 
-  mutate(abzeroc = if_else(abrbd <= 5, "Yes", "No")) %>% 
-  select(subjectid, abzeroc) %>% 
-  set_variable_labels(abzeroc = "Zero converted (RBD ≤ 5)?")
+  mutate(abseroc = if_else(abrbd < 5, "Yes", "No")) %>% 
+  select(subjectid, abseroc) %>% 
+  set_variable_labels(abseroc = "Seroconverted (RBD < 5)?")
 
 
 addm <- adsl %>% select(-age_calc,  -sex) %>% 

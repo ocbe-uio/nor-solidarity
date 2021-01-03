@@ -49,8 +49,10 @@ tddph <- raw %>%
 tdoa <- raw %>% 
   pick("oa") %>% 
   labeliser(codelist = items) %>% 
-  select(subjectid,  starts_with("oa")) %>% 
-  select(-ends_with("cd"))
+  select(subjectid,  bldt = eventdate, starts_with("oa")) %>% 
+  select(-ends_with("cd")) %>% 
+  labelled::set_variable_labels(bldt = "Baseline date")
+  
 
 
 #########################################
