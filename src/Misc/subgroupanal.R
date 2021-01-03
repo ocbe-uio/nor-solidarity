@@ -2,6 +2,12 @@
 # Subgroupanalyses for viral load
 #########################
 
+library(tidyverse)
+library(ggformula)
+source("src/make_rd/stata.R")
+
+advl <- readr::read_rds("data/ad/advl.rds")
+
 sg_margins_f <- function(data,
                          sg_var = "sex") {
   
@@ -65,29 +71,7 @@ append using `tmp2' `tmp3' `tmp4' `tmp5' , gen(analysis)
   
 }
 
-#sg_margins_f(advl %>% filter(fas_rem == "Yes"))
 
-subgroups <- addm %>% 
-  select(subjectid, rcwhostate, abseroc, sympdur, 
-         dmage, vllog10cpkc, lbcrpres, lbferres, lblymres) %>% 
-  mutate(age_cat = if_else(dmage < 60, "age < 60 years", "age ≥ 60 years"),
-         sympdur_cat = if_else(sympdur < 7, "Symptom duration < 7 days", "Symptom duration ≥ 7 days"),
-         vl_median = median(vllog10cpkc, na.rm = TRUE),
-         vl_cat = if_else(vllog10cpkc < median(vllog10cpkc, na.rm = TRUE), "Low viral load", "High viral load"),
-         crp_median = median(lbcrpres, na.rm = TRUE),
-         crp_cat = if_else(lbcrpres < median(lbcrpres, na.rm = TRUE),"Low CRP", "High CRP"),
-         fer_median = median(lbferres, na.rm = TRUE),
-         fer_cat = if_else(lbferres < median(lbferres, na.rm = TRUE), "Low Ferritin", "High Ferritin"),
-         lym_median = median(lblymres, na.rm = TRUE),
-         lym_cat = if_else(lblymres < 0.5, "Low Lymphocytes", "High Lymphocytes")) %>% 
-  select(subjectid, rcwhostate, abseroc, ends_with("_cat"), ends_with("_median")) %>% 
-  mutate(across(ends_with("_cat"), factor))
-
-advl_sg <- advl %>% 
-  left_join(subgroups, by = "subjectid")
-
-sg_names <- tibble(sg_var = c("age_cat", "vl_cat", "crp_cat", "fer_cat", "lym_cat"),
-                   sg_label = c("Age", "Viral load", "CRP", "Ferritin", "Lymphocytes"))
 
 
 plot_sg_margins1 <- function(data){
@@ -106,13 +90,13 @@ plot_sg_margins2 <- function(data){
     theme(legend.position = "bottom")
 }
 
-mk_table <- function(margin, pop_text) {
+sg_table <- function(margin, pop_text) {
   margin %>% 
-    filter(analysis %in% c(1, 2, 3, 4)) %>% 
+    filter(analysis %in% c(1, 2, 3)) %>% 
     mutate(Explanation = case_when(
       analysis == 1 ~ "Slope 1st week by treatment and subgroup",
-      analysis == 2 ~ "Difference in slope",
-      analysis == 3 ~ "Treatment/Subgroup interaction") %>% 
+      analysis == 2 ~ "Treatment effect (Difference in slope)",
+      analysis == 3 ~ "Treatment/Subgroup interaction")) %>% 
     select(-analysis) %>%
     select(rantrt, subgroup, Explanation, margin, ci_lb, ci_ub, pvalue) %>% 
     knitr::kable(col.names = c("Treatment",
@@ -123,23 +107,60 @@ mk_table <- function(margin, pop_text) {
                                "Upper 95% CL",
                                "P-value"),
                  digits = 3, caption = glue::glue("Estimated treatment effect, {pop_text}"))
+    
 }
 
+
+filter_f <- function(data, filtervar) {
+  data %>% filter(!!ensym(filtervar) == "Yes")
+}
+
+
+subgroups <- addm %>% 
+  select(subjectid, rcwhostate, abseroc, sympdur, 
+         dmage, vllog10cpkc, lbcrpres, lbferres, lblymres) %>% 
+  mutate(age_cat = if_else(dmage < 60, "age < 60 years", "age ≥ 60 years"),
+         sympdur_cat = if_else(sympdur < 7, "Symptom duration < 7 days", "Symptom duration ≥ 7 days"),
+         vl_median = median(vllog10cpkc, na.rm = TRUE),
+         vl_cat = if_else(vllog10cpkc < median(vllog10cpkc, na.rm = TRUE), "Low viral load", "High viral load"),
+         crp_median = median(lbcrpres, na.rm = TRUE),
+         crp_cat = if_else(lbcrpres < median(lbcrpres, na.rm = TRUE),"Low CRP", "High CRP"),
+         fer_median = median(lbferres, na.rm = TRUE),
+         fer_cat = if_else(lbferres < median(lbferres, na.rm = TRUE), "Low Ferritin", "High Ferritin"),
+         lym_median = median(lblymres, na.rm = TRUE),
+         lym_cat = if_else(lblymres < 0.5, "Low Lymphocytes", "High Lymphocytes")) %>% 
+  select(subjectid, rcwhostate, abseroc, ends_with("_cat"), ends_with("_median")) %>% 
+  mutate(across(ends_with("_cat"), factor)) 
+  
+
+
+advl_sg <- advl %>% 
+  filter(studyday %in% c(-3:15) &
+           vlsource %in% c("Labfile only", "Both")) %>% 
+  left_join(subgroups, by = "subjectid")
+
+sg_names <- tibble(sg_var = c("abseroc","age_cat", "sympdur_cat", 
+                              "vl_cat", "crp_cat", "fer_cat"),
+                   sg_label = c( "Seroconverted", "Age", "Symptom duration", "Viral load", "CRP", "Ferritin"))
+
+
+future::plan(future::multisession) 
 
 rdvl_sg <-  tibble(population = c("fas_hcq", "fas_rem"),
                      pop_text = c("Hydroxychloroquine", "Remdesivir"))  %>% 
   crossing(sg_names) %>% 
   mutate(data = list(advl_sg),
          data = map2(data, population, filter_f),
-         margins = map2(data, sg_var, sg_margins_f))
+         margins = furrr::future_map2(data, sg_var, sg_margins_f),
+         plot1 = map(margins, plot_sg_margins1),
+         plot2 = map(margins, plot_sg_margins2),
+         table = map2(margins, pop_text, sg_table)
+         )
   
-plot_sg_margins1(rdvl_sg$margins[[1]])
+write_rds(rdvl_sg, "results/rd/rdvl_sg.rds")
 
-rdvl_sg1 <- rdvl_sg %>% 
-  mutate(plot1 = map(margins, plot_sg_margins1),
-         plot2 = map(margins, plot_sg_margins2))
   
-plot(rdvl_sg1$plot2[[1]])
+
 
 
 

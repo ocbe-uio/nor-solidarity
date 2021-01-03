@@ -26,7 +26,9 @@ advl <- adsl %>%
   left_join(tdvl, by = c("subjectid")) %>% 
   arrange(subjectid, vlsampledt) %>% 
   mutate(studyday = vlsampledt - bldt) %>% 
-  mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0))
+  mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0)) %>% 
+  filter(studyday %in% c(-3:15) &
+           vlsource %in% c("Labfile only", "Both")) 
 
 write_rds(advl, "data/ad/advl.rds")
 

@@ -8,7 +8,7 @@ TDMISC = data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds dat
 TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds data/td/tdlb.rds data/td/tdvl.rds data/td/tdab.rds
 ADMISC = data/ad/adab.rds data/ad/advl.rds data/ad/adrc.rds 
 AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adex.rds data/ad/addm.rds data/ad/adev.rds $(ADMISC)
-RD = results/rds/rdev.rds results/rds/rdlb.rds results/rds/rddi.rds results/rds/rdab.rds results/rds/rdvlrf.rds 
+RD = results/rds/rdev.rds results/rds/rdlb.rds results/rds/rddi.rds results/rds/rdab.rds results/rds/rdvlrf.rds results/rds/rdvl_sg.rds
 
 # Set this to FALSE when for the true results.  
 PSEUDORANDOM = TRUE
@@ -108,6 +108,9 @@ results/rds/rdab.rds: data/ad/adab.rds src/make_rd/make_rdab.R src/External/func
 
 results/rds/rdvlrf.rds: data/ad/advl.rds data/ad/adrc.rds src/make_rd/make_rdvlrf.R src/make_rd/stata.R
 	Rscript src/make_rd/make_rdvlrf.R
+	
+results/rds/rdvl_sg.rds: data/ad/advl.rds  src/make_rd/make_rdvl_sg.R src/make_rd/stata.R
+	Rscript src/make_rd/make_rdvl_sg.R
 	
 ##############################
 # Make reports
