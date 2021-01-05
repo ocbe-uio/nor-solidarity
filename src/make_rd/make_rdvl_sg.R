@@ -7,6 +7,7 @@ library(ggformula)
 source("src/make_rd/stata.R")
 
 advl <- readr::read_rds("data/ad/advl.rds")
+addm <- readr::read_rds("data/ad/addm.rds")
 
 sg_margins_f <- function(data,
                          sg_var = "sex") {
@@ -71,8 +72,28 @@ append using `tmp2' `tmp3' `tmp4' `tmp5' , gen(analysis)
   
 }
 
-
-
+plot_cont_margins <- function(data, ytitle = "Value") {
+  data %>%
+    gf_line(
+      margin ~ studyday,
+      color = ~ rantrt,
+      group = ~ rantrt,
+      position = position_dodge(0.4),
+      size = 1
+    ) %>%
+    gf_point(position = position_dodge(0.4)) %>%
+    gf_errorbar(
+      ci_lb + ci_ub ~ studyday,
+      color = ~ rantrt,
+      width = .8,
+      position = position_dodge(0.4)
+    ) %>%
+    gf_labs(x = "Study day",
+            y = str2expression(ytitle),
+            color = "Treatment") %>%
+    gf_theme(theme_classic())
+  
+}
 
 plot_sg_margins1 <- function(data){
   data <- data %>% filter(analysis == 0)

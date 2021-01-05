@@ -1,5 +1,5 @@
 
-VIEDOC_EXPORT_NAME = ous_20201121_154631
+VIEDOC_EXPORT_NAME = ous_20210104_003034
 DATE = $(shell echo $(VIEDOC_EXPORT_NAME) | sed 's/.*_\(....\)\(..\)\(..\)_.*/\1-\2-\3/')
 DMC_REPORT = $(DATE)_Nor-Solidarity_DMC_Report.docx
 MAIN_REPORT1 = $(DATE)_Nor-Solidarity_Main_Report1.docx
@@ -11,7 +11,7 @@ AD = data/ad/adsl.rds data/ad/adae.rds data/ad/adex.rds data/ad/addm.rds data/ad
 RD = results/rds/rdev.rds results/rds/rdlb.rds results/rds/rddi.rds results/rds/rdab.rds results/rds/rdvlrf.rds results/rds/rdvl_sg.rds
 
 # Set this to FALSE when for the true results.  
-PSEUDORANDOM = TRUE
+PSEUDORANDOM = FALSE
 
 .PHONY: all td ad rd raw dmc_report main_report1
 all: td ad raw rd
@@ -109,7 +109,7 @@ results/rds/rdab.rds: data/ad/adab.rds src/make_rd/make_rdab.R src/External/func
 results/rds/rdvlrf.rds: data/ad/advl.rds data/ad/adrc.rds src/make_rd/make_rdvlrf.R src/make_rd/stata.R
 	Rscript src/make_rd/make_rdvlrf.R
 	
-results/rds/rdvl_sg.rds: data/ad/advl.rds  src/make_rd/make_rdvl_sg.R src/make_rd/stata.R
+results/rds/rdvl_sg.rds: data/ad/advl.rds data/ad/addm.rds src/make_rd/make_rdvl_sg.R src/make_rd/stata.R
 	Rscript src/make_rd/make_rdvl_sg.R
 	
 ##############################

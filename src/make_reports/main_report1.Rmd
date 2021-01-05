@@ -289,7 +289,7 @@ dm_table <- tribble(
   "**Viral count**", "empty", "", list(),
   "  Viral count (log~10~ counts/1000 cells)", "mean_sd", "vllog10cpkc", list(digits = 1),
   "**Anti-SARS-CoV-2 Antibodies**", "empty", "", list(),
-  "  Sero converted (RBD ≤ 5)", "n_pct", "abseroc", list(level = "Yes"),
+  "  Sero converted (RBD ≥ 5)", "n_pct", "abseroc", list(level = "RBD ≥ 5"),
   "**Supplementary baseline information**", "empty", "", list(),
   "  Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
   "  Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0),
