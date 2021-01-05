@@ -17,7 +17,7 @@ source("src/external/functions.R")
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args)==0) {
-  pseudorand <- TRUE #default to pseudorandom treatment
+  pseudorand <- FALSE #default to pseudorandom treatment
   set.seed = 42
 } else if (length(args) != 0) {
   pseudorand <- args[1]
