@@ -220,6 +220,32 @@ fas_table %>%
   knitr::kable(col.names = c("Parameter", arms_tot),
                caption = "Patient flow by arm")
 
+fas_table %>%
+  filter(text != "Enrolled") %>%
+  mutate(data = list(adsl_all %>% filter(ranavail_hcq == "Yes")),
+         group = "rantrt") %>%
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, any_of(levels(adsl$rantrt))) %>% 
+  select(-`Remdesivir + SOC`) %>% 
+  knitr::kable(col.names = c("Parameter", arms_hcq),
+               caption = "Patient flow by arm in HCQ")
+
+fas_table %>%
+  filter(text != "Enrolled") %>%
+  mutate(data = list(adsl_all %>% filter(ranavail_rem == "Yes")),
+         group = "rantrt") %>%
+  mutate(res = pmap(list(f, data , var, group, param), stats_exec)) %>%
+  mutate(id = map(res,names)) %>%
+  unnest(c(res, id)) %>%
+  pivot_wider(values_from = res, names_from = id) %>%
+  select(text, any_of(levels(adsl$rantrt))) %>%
+  select(-`Hydroxychloroquine + SOC`) %>% 
+  knitr::kable(col.names = c("Parameter", arms_rem),
+               caption = "Patient flow by arm in Remdesivir")
+
 adsl %>% 
   left_join(tdds, by = "subjectid") %>% 
   group_by(eosreas, rantrt) %>% 
@@ -232,6 +258,32 @@ adsl %>%
   rename(Reason = eosreas ) %>% 
   knitr::kable(caption = "Patient flow during study (FAS)")
   
+
+adsl %>% 
+  left_join(tdds, by = "subjectid") %>% 
+  filter(fas_hcq == "Yes") %>% 
+  group_by(eosreas, rantrt) %>% 
+  summarise(n = n(), .groups = "drop_last") %>% 
+  pivot_wider(names_from = rantrt, values_from = n) %>% 
+  mutate(across(where(is.integer), ~ if_else(is.na(.x), 0L, .x))) %>% 
+  mutate(eosreas = str_trunc(as.character(eosreas), 40, ellipsis = ""),
+         Total = `Standard of care (SOC)` + `Hydroxychloroquine + SOC`) %>% 
+  mutate(eosreas = if_else(is.na(eosreas), "Completed", eosreas)) %>% 
+  rename(Reason = eosreas ) %>% 
+  knitr::kable(caption = "Patient flow during study (FAS) in HCQ")
+
+adsl %>% 
+  left_join(tdds, by = "subjectid") %>% 
+  filter(fas_rem == "Yes") %>% 
+  group_by(eosreas, rantrt) %>% 
+  summarise(n = n(), .groups = "drop_last") %>% 
+  pivot_wider(names_from = rantrt, values_from = n) %>% 
+  mutate(across(where(is.integer), ~ if_else(is.na(.x), 0L, .x))) %>% 
+  mutate(eosreas = str_trunc(as.character(eosreas), 40, ellipsis = ""),
+         Total = `Standard of care (SOC)` + `Remdesivir + SOC`) %>% 
+  mutate(eosreas = if_else(is.na(eosreas), "Completed", eosreas)) %>% 
+  rename(Reason = eosreas ) %>% 
+  knitr::kable(caption = "Patient flow during study (FAS) in Remdesivir")
 
 ```
 
@@ -688,7 +740,7 @@ efflbres %>%
 ## SARS-CoV2 antibodies at day 90
 
 ### Descriptives
-```{r ab-desc, results = "asis"}
+```{r ab-desc, results = "asis", warning = FALSE, message = FALSE}
 
 rdab <- readr::read_rds("results/rds/rdab.rds")
 
@@ -722,6 +774,12 @@ rdab_tbl(rdab, pop, mean_text, id) %>%
 rdab_dtbl("Hydroxychloroquine")
 
 rdab_dtbl("Remdesivir")
+
+adab %>% filter(studyday>65) %>% mutate(antibodies  = if_else(abrbd >= 5, 1, 0)) %>% group_by(rantrt, subjectid) %>% summarise(antibodies = max(antibodies)) %>% group_by(rantrt) %>% summarise(tot = sum(antibodies), n = n()) %>% knitr::kable(caption = "Number of positive antibodies (rbd ≥ 5) by treatment group")
+
+adab %>% filter(studyday>65 & fas_hcq == "Yes") %>% mutate(antibodies  = if_else(abrbd >= 5, 1, 0)) %>% group_by(rantrt, subjectid) %>% summarise(antibodies = max(antibodies)) %>% group_by(rantrt) %>% summarise(tot = sum(antibodies), n = n()) %>% knitr::kable(caption = "Number of positive antibodies (rbd ≥ 5) by treatment group in HCQ")
+
+adab %>% filter(studyday>65 & fas_rem == "Yes") %>% mutate(antibodies  = if_else(abrbd >= 5, 1, 0)) %>% group_by(rantrt, subjectid) %>% summarise(antibodies = max(antibodies)) %>% group_by(rantrt) %>% summarise(tot = sum(antibodies), n = n()) %>% knitr::kable(caption = "Number of positive antibodies (rbd ≥ 5) by treatment group in Remdesivir")
 
 ```
 
