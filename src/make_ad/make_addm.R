@@ -36,12 +36,15 @@ tdvl_bl <- tdvl %>%
 tdab_bl <- tdab %>% 
   filter(studyday == 1) %>% 
   mutate(abseroc = if_else(abrbd < 5, "RBD < 5", "RBD ≥ 5"),
-         abseroc = factor(abseroc)) %>% 
-  select(subjectid, abseroc) %>% 
-  set_variable_labels(abseroc = "Seroconverted (RBD ≥ 5)")
+         abseroc = factor(abseroc),
+         abcapsidd = if_else(abcapsid < 10, "Capsid < 10", "Capsid ≥ 10"),
+         abcapsidd = factor(abcapsidd)) %>% 
+  select(subjectid, abseroc, abcapsidd) %>% 
+  set_variable_labels(abseroc = "Seroconverted (RBD ≥ 5)",
+                      abcapsidd = "Seroconverted (Capsid ≥ 10)")
 
 
-addm <- adsl %>% select(-age_calc,  -sex) %>% 
+addm <- adsl %>% select(-age_calc, -sex, -dmicdat, -dmini) %>% 
   left_join(tddm, by ="subjectid") %>% filter(fas == "Yes") %>% 
   # Add admittance at baseline
   left_join(tdsq %>% filter(eventid == "V00") %>% select(subjectid, sq_admis), by = "subjectid") %>% 
@@ -49,7 +52,7 @@ addm <- adsl %>% select(-age_calc,  -sex) %>%
   left_join(tdvs %>% 
               filter(eventid == "V00") %>% 
               select(subjectid, vsweight, vsheight, vsbmi, vsobese, 
-                     vssys, vsdia, vsmap, vstemp), 
+                     vssys, vsdia, vsmap, vstemp, vsres), 
             by = "subjectid") %>% 
   left_join(tdrc %>%
               filter(eventid == "V00") %>%

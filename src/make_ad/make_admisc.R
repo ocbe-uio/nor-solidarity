@@ -10,11 +10,17 @@ tdab <- read_rds("data/td/tdab.rds")
 adsl<- read_rds("data/ad/adsl.rds")
 
 adab <- adsl %>% 
-  left_join(tdab %>% select(subjectid, studyday, absumctr, abrbd, abace2rbd ), by = "subjectid") %>% 
+  left_join(tdab %>% select(subjectid, studyday, absumctr, abrbd, abace2rbd, abcapsid ), by = "subjectid") %>% 
   mutate(abnormrbd = abrbd/absumctr*100,
          ablog10ace2rbd = log10(abace2rbd)) %>% 
   filter(studyday > 65) %>% 
-  mutate(rantrt = factor(rantrt, ordered = FALSE))
+  mutate(rantrt = factor(rantrt, ordered = FALSE)) %>% 
+  mutate(abseroc = if_else(abrbd < 5, "RBD < 5", "RBD ≥ 5"),
+         abseroc = factor(abseroc),
+         abcapsidd = if_else(abcapsid < 10, "Capsid < 10", "Capsid ≥ 10"),
+         abcapsidd = factor(abcapsidd)) %>% 
+  labelled::set_variable_labels(abseroc = "Seroconverted (RBD ≥ 5)",
+                      abcapsidd = "Seroconverted (Capsid ≥ 10)")
 
 write_rds(adab, "data/ad/adab.rds")
 

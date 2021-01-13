@@ -10,12 +10,13 @@ adab <- readr::read_rds("data/ad/adab.rds")
 
 source("src/External/functions.R")
 
-label <- tibble(var = c("abrbd","abnormrbd","ablog10ace2rbd"),
+label <- tibble(var = c("abrbd","abnormrbd","ablog10ace2rbd", "abcapsid"),
                 label = c("Receptor-bindind domain", 
                           "Normalised receptor-binding domain", 
-                          "log10 ACE2 receptor-binding domain"), 
-                seq = 1:3, 
-                digits = c(1, 1, 2))
+                          "log10 ACE2 receptor-binding domain",
+                          "Capsid"), 
+                seq = 1:4, 
+                digits = c(1, 1, 2, 1))
 
 filter_f <- function(data, filtervar) {
   data %>% filter(!!ensym(filtervar) == "Yes")

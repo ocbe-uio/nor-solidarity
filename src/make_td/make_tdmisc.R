@@ -83,7 +83,8 @@ tdds <- raw %>%
   left_join(select(tdran, subjectid, randt), by="subjectid") %>% 
   left_join(tdds, by = "subjectid") %>% 
   left_join(tddph, by = "subjectid") %>% 
-  arrange(subjectid) 
+  arrange(subjectid) %>% 
+  mutate(eosreas = fct_recode(eosreas, `Voluntary discontinuation by the patient` = "Voluntary discontinuation by the patient who is at any time free to discontinue his/her participation in the study, without prejudice to further treatment"))
 
 write_rds(tdds, "data/td/tdds.rds")
 
