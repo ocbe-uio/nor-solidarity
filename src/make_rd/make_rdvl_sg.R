@@ -138,7 +138,7 @@ filter_f <- function(data, filtervar) {
 
 
 subgroups <- addm %>% 
-  select(subjectid, rcwhostate, abseroc, sympdur, 
+  select(subjectid, rcwhostate, abseroc, abcapsidd, sympdur, 
          dmage, vllog10cpkc, lbcrpres, lbferres, lblymres) %>% 
   mutate(age_cat = if_else(dmage < 60, "age < 60 years", "age ≥ 60 years"),
          sympdur_cat = if_else(sympdur < 7, "Symptom duration < 7 days", "Symptom duration ≥ 7 days"),
@@ -150,7 +150,7 @@ subgroups <- addm %>%
          fer_cat = if_else(lbferres < median(lbferres, na.rm = TRUE), "Low Ferritin", "High Ferritin"),
          lym_median = median(lblymres, na.rm = TRUE),
          lym_cat = if_else(lblymres < 0.5, "Low Lymphocytes", "High Lymphocytes")) %>% 
-  select(subjectid, rcwhostate, abseroc, ends_with("_cat"), ends_with("_median")) %>% 
+  select(subjectid, rcwhostate, abseroc, abcapsidd, ends_with("_cat"), ends_with("_median")) %>% 
   mutate(across(ends_with("_cat"), factor)) 
   
 
@@ -160,9 +160,9 @@ advl_sg <- advl %>%
            vlsource %in% c("Labfile only", "Both")) %>% 
   left_join(subgroups, by = "subjectid")
 
-sg_names <- tibble(sg_var = c("abseroc","age_cat", "sympdur_cat", 
+sg_names <- tibble(sg_var = c("abseroc", "abcapsidd", "age_cat", "sympdur_cat", 
                               "vl_cat", "crp_cat", "fer_cat"),
-                   sg_label = c( "Seroconverted", "Age", "Symptom duration", "Viral load", "CRP", "Ferritin"))
+                   sg_label = c( "Seroconverted (RBD)", "Seroconverted (Capsid)", "Age", "Symptom duration", "Viral load", "CRP", "Ferritin"))
 
 
 future::plan(future::multisession) 

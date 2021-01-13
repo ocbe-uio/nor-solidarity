@@ -33,7 +33,6 @@ tdran <- read_rds("data/td/tdran.rds")
 raw <- read_rds("data/raw/raw.rds")
 adsl <- read_rds("data/ad/adsl.rds")
 adex <- read_rds("data/ad/adex.rds")
-adeff <- read_rds("data/ad/adeff.rds")
 adae <- read_rds("data/ad/adae.rds")
 tdex <- read_rds("data/td/tdex.rds")
 addm <- read_rds("data/ad/addm.rds")
@@ -304,6 +303,7 @@ dm_table <- tribble(
   "  P/F-ratio at admittance (kPa)", "mean_sd", "rcratio", list(digits = 0),
   "  P/F-ratio < 40kPa, n (%)", "n_pct", "rcratio40", list(level = "Yes"),
   "  Temperature (°C)", "mean_sd", "vstemp", list(digits = 1),
+  "  Respiratory rate (breaths/min)", "mean_sd", "vsres", list(digits = 1),
   "  Admitted to ward, n(%)", "n_pct", "sq_admis", list(level = "Ward"),
   "  Admitted to ICU, n(%)", "n_pct", "sq_admis", list(level = "ICU"),
   " WHO Moderate disease state (4-5), n(%)", "n_pct", "rcwhostate", list(level = "Moderate"),
@@ -342,6 +342,7 @@ dm_table <- tribble(
   "  Viral count (log~10~ counts/1000 cells)", "mean_sd", "vllog10cpkc", list(digits = 1),
   "**Anti-SARS-CoV-2 Antibodies**", "empty", "", list(),
   "  Sero converted (RBD ≥ 5)", "n_pct", "abseroc", list(level = "RBD ≥ 5"),
+  "  Sero converted (Capsid ≥ 10)", "n_pct", "abcapsidd", list(level = "Capsid ≥ 10"),  
   "**Supplementary baseline information**", "empty", "", list(),
   "  Systolic Blood Pressure (mmHg)", "mean_sd", "vssys", list(digits = 0),
   "  Diastolic Blood Pressure (mmHg)", "mean_sd", "vsdia", list(digits = 0),
@@ -455,12 +456,12 @@ mort_desc_f(fas_rem, caption = "Remdesivir (FAS)")
 ### Plots
 ```{r mortres-plots}
 rdev <- read_rds("results/rds/rdev.rds")
-
+trt_colors <- c(`Standard of care (SOC)`="grey30", `Hydroxychloroquine + SOC` = "blue", `Remdesivir + SOC` = "red")
 
 
 rdev %>%
   mutate(title = glue::glue("{fname}, {dname}"),
-         plot = map2(plot, title, ~ .x + ggtitle(.y)),
+         plot = map2(plot, title, ~ .x + ggtitle(.y) ),
          walk(plot,print)) %>%
   invisible()
 
@@ -487,16 +488,24 @@ rdev %>%
 
 ```{r vl-plots, results = "asis", warning = FALSE}
 
-rdvlrf <- readr::read_rds("results/rds/rdvlrf.rds")
+rdvlrf <- readr::read_rds("results/rds/rdvlrf.rds") %>% 
+  mutate(filename = paste0(str_to_upper(str_remove(population, "fas_")), if_else(seq == 1, " Viral Load ", " PF_rate ")  ))
+
+trt_colors <- c(`Standard of care (SOC)`="grey30", `Hydroxychloroquine + SOC` = "blue", `Remdesivir + SOC` = "red")
+
+save_plot_pdf <- function(plot, filename){
+  ggsave(filename = paste0(filename, ".pdf"), plot = plot, device = "pdf", path = "results/figures")
+}
 
 rdvlrf %>%
   filter(seq == 1) %>% 
-  mutate(walk(plot1, plot)) %>% 
+  mutate(plot1 = map(plot1, ~plot(.x + scale_color_manual(values = trt_colors))),
+         walk2(plot1, filename, save_plot_pdf)) %>% 
   invisible()
 
 rdvlrf %>%
   filter(seq == 1) %>% 
-  mutate(walk(plot2, plot)) %>% 
+  mutate(plot2 = map(plot2, ~plot(.x + scale_color_manual(values = trt_colors)))) %>% 
   invisible()
   
   
@@ -522,16 +531,18 @@ rdvlrf %>%
 
 ```{r vl-sg-plots-hcq, results = "asis", warning = FALSE}
 
-rdvl_sg <- readr::read_rds("results/rds/rdvl_sg.rds")
+rdvl_sg <- readr::read_rds("results/rds/rdvl_sg.rds") %>% 
+  mutate(filename = paste0(str_to_upper(str_remove(population, "fas_")), " Viral Load ",  sg_label))
 
 rdvl_sg %>%
   filter(population == "fas_hcq") %>% 
-  mutate(walk(plot1, plot)) %>% 
+  mutate(plot1 = map(plot1, ~plot(.x + scale_color_manual(values = trt_colors))),
+         walk2(plot1, filename, save_plot_pdf)) %>% 
   invisible()
 
 rdvl_sg %>%
   filter(population == "fas_hcq") %>% 
-  mutate(walk(plot2, plot)) %>% 
+  mutate(walk(plot2, ~plot(.x + scale_color_manual(values = trt_colors)))) %>% 
   invisible()
   
 ```
@@ -552,16 +563,15 @@ rdvl_sg %>%
 
 ```{r vl-sg-plots-rem, results = "asis", warning = FALSE}
 
-rdvl_sg <- readr::read_rds("results/rds/rdvl_sg.rds")
-
 rdvl_sg %>%
-  filter(population =="fas_rem") %>% 
-  mutate(walk(plot1, plot)) %>% 
+  filter(population == "fas_rem") %>% 
+  mutate(plot1 = map(plot1, ~plot(.x + scale_color_manual(values = trt_colors))),
+         walk2(plot1, filename, save_plot_pdf)) %>% 
   invisible()
 
 rdvl_sg %>%
   filter(population == "fas_rem") %>% 
-  mutate(walk(plot2, plot)) %>% 
+  mutate(walk(plot2, ~plot(.x + scale_color_manual(values = trt_colors)))) %>% 
   invisible()
   
 ```
@@ -590,12 +600,13 @@ rdvl_sg %>%
 
 rdvlrf %>%
   filter(seq == 2) %>% 
-  mutate(walk(plot1, plot)) %>% 
+  mutate(plot1 = map(plot1, ~plot(.x + scale_color_manual(values = trt_colors))),
+         walk2(plot1, filename, save_plot_pdf)) %>% 
   invisible()
   
 rdvlrf %>%
   filter(seq == 2) %>% 
-  mutate(walk(plot2, plot)) %>% 
+  mutate(walk(plot2, ~plot(.x + scale_color_manual(values = trt_colors)))) %>% 
   invisible()
 
 ```
@@ -673,7 +684,8 @@ rem_m %>%
 
 
 ```{r efflbres, results = "asis", echo = FALSE}
-rdlb <- read_rds("results/rds/rdlb.rds")
+rdlb <- read_rds("results/rds/rdlb.rds") %>% 
+  mutate(filename = paste0(str_to_upper(str_remove(population, "fas_")), "_", var ))
 
 
 
@@ -712,9 +724,11 @@ efflbres %>%
 
 ```{r efflbres-plots, results = "asis"}
 efflbres %>%
-  mutate(marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) ),
-         walk(marginsplot, print))  %>%
+  mutate(marginsplot = map2(marginsplot, title, ~ .x + ggtitle(.y) + scale_color_manual(values = trt_colors)),
+         walk(marginsplot, print),
+         walk2(marginsplot, filename, save_plot_pdf))  %>%
   invisible()
+
 
 ```
 
@@ -743,6 +757,7 @@ efflbres %>%
 ```{r ab-desc, results = "asis", warning = FALSE, message = FALSE}
 
 rdab <- readr::read_rds("results/rds/rdab.rds")
+adab <- readr::read_rds("data/ad/adab.rds")
 
 rdab_tbl <- function(data, pop, text, id) {
   

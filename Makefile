@@ -2,7 +2,7 @@
 VIEDOC_EXPORT_NAME = ous_20210104_003034
 DATE = $(shell echo $(VIEDOC_EXPORT_NAME) | sed 's/.*_\(....\)\(..\)\(..\)_.*/\1-\2-\3/')
 DMC_REPORT = $(DATE)_Nor-Solidarity_DMC_Report.docx
-MAIN_REPORT1 = $(DATE)_Nor-Solidarity_Main_Report1.docx
+MAIN_REPORT1 = $(DATE)_Nor-Solidarity_Main_Report2.docx
 RAW_CSV = $(wildcard data/raw/$(VIEDOC_EXPORT_NAME)/*)
 TDMISC = data/td/tdae.rds data/td/tdex.rds data/td/tdsq.rds data/td/tdsc.rds data/td/tdcm.rds data/td/tdds.rds
 TD = data/td/tdran.rds $(TDMISC) data/td/tddm.rds data/td/tdrc.rds data/td/tdvs.rds data/td/tdlb.rds data/td/tdvl.rds data/td/tdab.rds

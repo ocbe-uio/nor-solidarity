@@ -7,11 +7,12 @@
 library(modmarg)
 library(tidyverse)
 adev <- readr::read_rds("data/ad/adev.rds")
+adab <- readr::read_rds("data/ad/adab.rds")
 source("src/External/functions.R")
 
 label <- tibble(var = c("survcens","survcens_28","survcens_60", "progression", 
                         "progression28", "progression60", "mv", "mv28", "mv60", 
-                        "sq_admis_max", "sq_admis_max28", "sq_admis_max60"),
+                        "sq_admis_max", "sq_admis_max28", "sq_admis_max60", "abseroc", "abcapsidd"),
                 label = c("Mortality during hospitalisation", 
                           "Mortality (censored at day 28)", 
                           "Mortality (censored at day 60)",
@@ -23,9 +24,11 @@ label <- tibble(var = c("survcens","survcens_28","survcens_60", "progression",
                           "Mechanical ventilation (censored at day 60)",
                           "Admission to ICU during hospitalisation",
                           "Admission to ICU (censored at day 28)",
-                          "Admission to ICU (censored at day 60)"), 
-                level = c(rep("No", 3), rep("Yes", 6), rep("ICU",3)),
-                seq = 1:12)
+                          "Admission to ICU (censored at day 60)",
+                          "Seroconverted (RBD ≥ 5)",
+                          "Seroconverted (Capsid ≥ 10)"), 
+                level = c(rep("No", 3), rep("Yes", 6), rep("ICU",3), "RBD ≥ 5", "Capsid ≥ 10"),
+                seq = 1:14)
 
 filter_f <- function(data, filtervar) {
   data %>% filter(!!ensym(filtervar) == "Yes")
@@ -64,13 +67,15 @@ margineff_f <- function(data, formula){
   return(effmarg)
 }
 
+didata <- adev %>% 
+  left_join(adab %>% select(subjectid, abseroc, abcapsidd), by = "subjectid")
 
 rddi <- tibble(population = c("fas_hcq", "fas_rem"),
                pop_text = c("Hydroxychloroquine", "Remdesivir"),
 ) %>% 
   crossing(label) %>% 
   arrange(population, seq) %>% 
-  mutate(data = list(adev),
+  mutate(data = list(didata),
          data = map2(data, population, filter_f),
          group = "rantrt",
          desc_text = pmap(list(data, var, group, level), n_pct),
