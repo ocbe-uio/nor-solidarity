@@ -653,6 +653,12 @@ rddi_tbl(rddi, "Remdesivir", desc_text, desc_id) %>%
   knitr::kable(caption = "Remdesivir")
 cat("Figures are number of patients with the outcome and percent (%)")
 
+adab <- readr::read_rds("data/ad/adab.rds")
+
+adab %>% 
+  summarise(total = n(), rbd = sum(abseroc=="RBD ≥ 5"), capsid = sum(abcapsidd == "Capsid ≥ 10")) %>% 
+  knitr::kable(caption = "Number of seroconverted out of total")
+
 
 ```
 
