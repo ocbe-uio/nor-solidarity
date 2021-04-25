@@ -21,6 +21,22 @@ RR_f <- function(diff){
   return(txt)
 }
 
+cox_f <- function(tc){
+  if(is.na(tc$p.value))
+    return ("Not applicable")
+  
+  tc <- slice(tc,1)
+  HR <- exp(tc$estimate)
+  HR_l <- exp(tc$conf.low)
+  HR_u <- exp(tc$conf.high)
+  
+  txt <- paste0(round(HR, digits = 2), " (95% CI ", 
+                round(HR_l, digits = 2), " to ", round(HR_u, digits = 2), ")")
+  pval = tc$p.value
+  ret = list(txt = txt, pval = pval)
+  return(ret)
+}
+
 data <- tibble(
   data = list(adev, adev %>% filter(fas_hcq == "Yes"), adev %>% filter(fas_rem == "Yes")),
   dname = c("All", "Hydroxychloroquine only", "Remdesivir only")            
@@ -37,7 +53,14 @@ survres <- tibble(
          diff = map2(formula, data, ~survdiff(formula = .x, data = .y)),
          chisq = map_dbl(diff, ~.x$chisq),
          pval = map_dbl(diff, ~round(1-pchisq(.x$chisq, length(.x$obs)-1), digits = 3)),
-         RR = map_chr(diff, ~RR_f(.x)))
+         RR = map_chr(diff, ~RR_f(.x)),
+         coxfit = map2(formula, data, ~coxph(formula = .x, data = .y)),
+         tidycox = map(coxfit, broom::tidy, conf.int = "TRUE"),
+         cox_txt = map(tidycox, cox_f),
+         HR = map_chr(cox_txt, ~.x$txt),
+         cox_p = map_dbl(cox_txt, ~round(.x$pval, digits = 3)),
+         HR = if_else(RR == "Not applicable", RR, HR)
+         )
 
 
 write_rds(survres, "results/rds/rdev.rds")
