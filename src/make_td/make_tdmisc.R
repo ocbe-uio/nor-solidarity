@@ -35,15 +35,19 @@ tdsc <- raw %>%
 write_rds(tdsc, "data/td/tdsc.rds")
 
 
+
+
 tddph <- raw %>% 
   pick("dph") %>% 
   labeliser(codelist = items) %>% 
   group_by(subjectid) %>% 
-  summarise(dphstdt = min(dphad), dphendt = max(dphad), .groups = "drop_last") %>% 
+  summarise(dphstdt = min(dphad), dphendt = max(dphad), dphdisc = max(dphdisc), .groups = "drop_last") %>% 
+  select(subjectid, dphstdt, dphendt, dphdisc) %>% 
+  ungroup %>% 
   labelled::set_variable_labels(dphstdt = "First discharge date",
-                                dphendt = "Last discharge date") %>% 
-  select(subjectid, dphstdt, dphendt) %>% 
-  ungroup
+                                dphendt = "Last discharge date",
+                                dphdisc = "Discharged to")
+
 
 
 tdoa <- raw %>% 
