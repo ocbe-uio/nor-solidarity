@@ -38,6 +38,8 @@ tdex <- read_rds("data/td/tdex.rds")
 addm <- read_rds("data/ad/addm.rds")
 adev <- read_rds("data/ad/adev.rds")
 tdds <- read_rds("data/td/tdds.rds")
+advl <- read_rds("data/ad/advl.rds")
+adrc <- read_rds("data/ad/adrc.rds")
 
 source("src/External/functions.R", local = knitr::knit_global())
 export_date = substr(params$viedoc_export,5,19) %>% lubridate::as_datetime()
@@ -244,6 +246,7 @@ dm_table_f(addm_rem, missing_table, "Missing values, Remdesevir (FAS)", header_r
 
 
 ```
+
 # 25 Post-hoc power calculations
 
 Anwer to stats review no 25:
@@ -257,13 +260,14 @@ power.prop.test(n = 50, p1 = .07, power = .80)
 ```
 
 From the calculations we see that in a new trial we would need an absolute treatment difference in probability of death of 0.21 or 21% to reach 80% power with a sample size of 50 in each group. 
+
 # 7 Cox regression hazard ratio calculations
 
 Answer to Statistical review comment no 7:
 "7.	Please calculate hazard ratios via Cox models, and delete the "The natural logarithm of the average mortality rate ratio (logeRR) was estimated using the (O-E)/V estimator from the log-rank statistic with 95 % confidence intervals estimated using a normal distribution with 1/V as variance"."
 
 
-```{r cox-est}
+```{r cox-est, warning = FALSE, message = FALSE, results = 'asis', echo = FALSE}
 
 rdev <- read_rds("results/rds/rdev.rds")
 rdev %>%
@@ -276,36 +280,202 @@ rdev %>%
 ```
 
 
-# 8 and 22 Box plots
+# 8 Box-plots 
 
 This is an answer to stats point 8 
 
 8.	In sensitivity analyses, please include the results of some relatively simple between-arm comparisons for continuous outcomes (e.g. boxplots of the arithmetic change in the outcome from baseline to day 7 and baseline to day 10 by arm, with between-arm comparisons of these temporal changes using t-tests or Wilcoxon tests).
 
-23.	Figure 2: Please present the number of patients under observation at each time point separately by arm.
+## Viral load
 
-```{r vl-plots, results = "asis", warning = FALSE}
+```{r vl-est,warning = FALSE, message = FALSE, results = 'asis', echo = FALSE}
 
-rdvlrf <- readr::read_rds("results/rds/rdvlrf.rds") %>% 
-  mutate(filename = paste0(str_to_upper(str_remove(population, "fas_")), if_else(seq == 1, " Viral Load ", " PF_rate ")  ))
+
 
 trt_colors <- c(`Standard of care (SOC)`="grey30", `Hydroxychloroquine + SOC` = "blue", `Remdesivir + SOC` = "red")
 
-save_plot_pdf <- function(plot, filename){
-  ggsave(filename = paste0(filename, ".pdf"), plot = plot, device = "pdf", path = "results/figures")
-}
-
-rdvlrf %>%
-  filter(seq == 1) %>% 
-  mutate(plot1 = map(plot1, ~plot(.x + scale_color_manual(values = trt_colors))),
-         walk2(plot1, filename, save_plot_pdf)) %>% 
-  invisible()
-
-rdvlrf %>%
-  filter(seq == 1) %>% 
-  mutate(plot2 = map(plot2, ~plot(.x + scale_color_manual(values = trt_colors)))) %>% 
-  invisible()
+vlbl<- advl %>%
+  filter(studyday <= 1) %>% 
+  group_by(subjectid, rantrt, fas_rem, fas_hcq) %>% 
+  summarise(value_bl = mean(vllog10cpkc_imp, rm.na = TRUE), .groups = "drop_last") %>% 
+  ungroup()
   
+
+vlday7<- advl %>%
+  filter(studyday >= 5 & studyday <=9) %>% 
+  group_by(subjectid, rantrt, fas_rem, fas_hcq) %>% 
+  summarise(value_7 = mean(vllog10cpkc_imp, rm.na = TRUE), .groups = "drop_last")%>% 
+  ungroup()
+
+vlday10<- advl %>%
+  filter(studyday >= 7 & studyday <=13) %>% 
+  group_by(subjectid, rantrt, fas_rem, fas_hcq) %>% 
+  summarise(value_10 = mean(vllog10cpkc_imp, rm.na = TRUE), .groups = "drop_last")%>% 
+  ungroup()
+
+vl <- vlbl %>% 
+  full_join(vlday7,by = c("subjectid", "rantrt", "fas_rem", "fas_hcq")) %>% 
+  full_join(vlday10,by = c("subjectid", "rantrt", "fas_rem", "fas_hcq")) %>% 
+  mutate(diff_7 = value_7 - value_bl,
+         diff_10 = value_10 - value_bl) %>% 
+  dplyr::select(-starts_with("value_")) %>% 
+  tidyr::pivot_longer(cols = c("diff_7", "diff_10"), names_to = "Timepoint") %>% 
+  mutate(Timepoint = factor(Timepoint, levels = c("diff_7", "diff_10")))
+
+
+vl_hcq = vl %>% filter(fas_hcq == "Yes" & !is.na(value))
+vl_rem = vl %>% filter(fas_rem == "Yes" & !is.na(value))
+
+ggplot(data = vl_hcq, aes(x = factor(Timepoint, ), y = value, fill = rantrt)) +
+    geom_boxplot() + 
+  ggpubr::theme_classic2() + 
+    labs(x = "Study day",
+               y = str2expression("Viral~load~(log[10]~copies~per~1000~cells)"),
+               fill = "Treatment") +
+   scale_fill_manual(values = trt_colors) 
+ggsave("results/figures/HCQ Viral Load boxplot.pdf")
+
+vl_hcq %>% group_by(Timepoint) %>% 
+  rstatix::t_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "T-test HCQ")
+
+vl_hcq %>% group_by(Timepoint) %>% 
+  rstatix::wilcox_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "Wilcoxon test HCQ")
+
+
+ggplot(data = vl_rem, aes(x = factor(Timepoint, ), y = value, fill = rantrt)) +
+    geom_boxplot() + 
+  ggpubr::theme_classic2() + 
+    labs(x = "Study day",
+               y = str2expression("Viral~load~(log[10]~copies~per~1000~cells)"),
+               fill = "Treatment") +
+   scale_fill_manual(values = trt_colors) 
+ggsave("results/figures/REM Viral Load boxplot.pdf")
+
+vl_hcq %>% group_by(Timepoint) %>% 
+  rstatix::t_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "T-test remdesivir")
+
+
+vl_hcq %>% group_by(Timepoint) %>% 
+  rstatix::wilcox_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "Wilcoxon test remdesivir")
+
+
+
+
+```
+
+## PF-ratio
+
+```{r pf-est ,warning = FALSE, message = FALSE, results = 'asis', echo = FALSE}
+
+trt_colors <- c(`Standard of care (SOC)`="grey30", `Hydroxychloroquine + SOC` = "blue", `Remdesivir + SOC` = "red")
+
+pfbl<- adrc %>%
+  filter(studyday <= 0) %>% 
+  group_by(subjectid, rantrt, fas_rem, fas_hcq) %>% 
+  summarise(value_bl = mean(rcratio, rm.na = TRUE), .groups = "drop_last") %>% 
+  ungroup()
   
+
+pfday7<- adrc %>%
+  filter(studyday >= 5 & studyday <=9) %>% 
+  group_by(subjectid, rantrt, fas_rem, fas_hcq) %>% 
+  summarise(value_7 = mean(rcratio, rm.na = TRUE), .groups = "drop_last")%>% 
+  ungroup()
+
+pfday10<- adrc %>%
+  filter(studyday >= 7 & studyday <=13) %>% 
+  group_by(subjectid, rantrt, fas_rem, fas_hcq) %>% 
+  summarise(value_10 = mean(rcratio, rm.na = TRUE), .groups = "drop_last")%>% 
+  ungroup()
+
+pf <- pfbl %>% 
+  full_join(pfday7,by = c("subjectid", "rantrt", "fas_rem", "fas_hcq")) %>% 
+  full_join(pfday10,by = c("subjectid", "rantrt", "fas_rem", "fas_hcq")) %>% 
+  mutate(diff_7 = value_7 - value_bl,
+         diff_10 = value_10 - value_bl) %>% 
+  dplyr::select(-starts_with("value_")) %>% 
+  tidyr::pivot_longer(cols = c("diff_7", "diff_10"), names_to = "Timepoint") %>% 
+  mutate(Timepoint = factor(Timepoint, levels = c("diff_7", "diff_10")))
+
+
+pf_hcq = pf %>% filter(fas_hcq == "Yes" & !is.na(value))
+pf_rem = pf %>% filter(fas_rem == "Yes" & !is.na(value))
+
+ggplot(data = pf_hcq, aes(x = factor(Timepoint, ), y = value, fill = rantrt)) +
+    geom_boxplot() + 
+  ggpubr::theme_classic2() + 
+    labs(x = "Study day",
+               y = str2expression("pO[2]/FiO[2]-ratio"),
+               fill = "Treatment") +
+   scale_fill_manual(values = trt_colors) 
+ggsave("results/figures/HCQ PF_rate boxplot.pdf")
+
+pf_hcq %>% group_by(Timepoint) %>% 
+  rstatix::t_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "T-test HCQ")
+
+pf_hcq %>% group_by(Timepoint) %>% 
+  rstatix::wilcox_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "Wilcoxon test HCQ")
+
+
+ggplot(data = pf_rem, aes(x = factor(Timepoint, ), y = value, fill = rantrt)) +
+    geom_boxplot() + 
+  ggpubr::theme_classic2() + 
+    labs(x = "Study day",
+               y = str2expression("pO[2]/FiO[2]-ratio"),
+               fill = "Treatment") +
+   scale_fill_manual(values = trt_colors) 
+
+ggsave("results/figures/REM PF_rate boxplot.pdf")
+
+pf_hcq %>% group_by(Timepoint) %>% 
+  rstatix::t_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "T-test remdesivir")
+
+
+pf_hcq %>% group_by(Timepoint) %>% 
+  rstatix::wilcox_test(value ~ rantrt) %>% 
+  knitr::kable(caption = "Wilcoxon test remdesivir")
+
+
+
+
+```
+
+# 23 Number under observation
+
+23.	Figure 2: Please present the number of patients under observation at each time point separately by arm.
+
+```{r, results = "asis", warning = FALSE}
+
+advl %>% filter(fas_hcq == "Yes") %>% 
+  group_by(rantrt, epoch, subjectid) %>% 
+  summarise(n = n(), .groups = "drop_last" ) %>% 
+  summarise(n = n(), .groups = "drop_last" ) %>% 
+  mutate(epoch = case_when(
+    epoch == 0 ~ "Baseline",
+    epoch == 4 ~ "Day 1 to 5",
+    epoch == 8 ~ "Day 6 to 10",
+    epoch == 15 ~ "Day 11 to 15"
+  )) %>% 
+  knitr::kable(caption = "Counts for HCQ", col.names = c("Treatment", "Period", "Number with non-missing values"))
+
+advl %>% filter(fas_rem == "Yes") %>% 
+  group_by(rantrt, epoch) %>% 
+  summarise(n = n(), .groups = "drop_last" ) %>% 
+  mutate(epoch = case_when(
+    epoch == 0 ~ "Baseline",
+    epoch == 4 ~ "Day 1 to 5",
+    epoch == 8 ~ "Day 6 to 10",
+    epoch == 15 ~ "Day 11 to 15"
+  )) %>% 
+  knitr::kable(caption = "Counts for remdesivir", col.names = c("Treatment", "Period", "Number of patients with non-missing values"))
+  
+
 ```
 
