@@ -34,16 +34,28 @@ advl <- adsl %>%
   mutate(studyday = vlsampledt - bldt) %>% 
   mutate(vllog10cpkc_imp = if_else(vldetect == "Detected", vllog10cpkc, 0)) %>% 
   filter(studyday %in% c(-3:15) &
-           vlsource %in% c("Labfile only", "Both")) 
+           vlsource %in% c("Labfile only", "Both")) %>% 
+  mutate(epoch = case_when(
+    studyday <= 1 ~ 0,
+    studyday <= 5 ~ 4,
+    studyday <= 10 ~ 8, 
+    TRUE ~ 15
+))
 
 write_rds(advl, "data/ad/advl.rds")
 
 tdrc <- readr::read_rds("data/td/tdrc.rds")
 
 adrc <- adsl %>% 
-  left_join(tdrc %>% select(subjectid, rcratio, eventdate), 
+  left_join(tdrc %>% select(subjectid, rcratio, eventdate, eventid), 
             by = "subjectid") %>% 
   mutate(studyday = eventdate - randt) %>% 
+  mutate(epoch = case_when(
+    studyday <= 0 ~ 0,
+    studyday <= 5 ~ 4,
+    studyday <= 10 ~ 8, 
+    TRUE ~ 15
+  )) %>% 
   mutate(rcratio = if_else(rcratio < 100, rcratio, NA_real_ ))
 
 write_rds(adrc, "data/ad/adrc.rds")  

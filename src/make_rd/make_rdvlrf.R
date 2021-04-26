@@ -134,11 +134,24 @@ plot_cont_margins2 <- function(data, ytitle){
   plot_cont_margins(data, ytitle)
 }
 
+plot_cont_boxplot <- function(data, ytitle, var){
+  var <- sym(var)
+  
+  ggplot(data = data, aes(x = factor(epoch), y = {{var}}, fill = rantrt) ) +
+    geom_boxplot() +
+    ggpubr::theme_classic2() + 
+    labs(x = "Study day",
+               y = str2expression(ytitle),
+               fill = "Treatment") + 
+  theme(legend.position = c(0.8, 0.8))
+}
+
+
 label <- tibble(var = c("vllog10cpkc_imp", "rcratio"),
                 label = c("Viral load (log~10~ copies per 1000 cells)", 
-                          "pO~2~/fiO~2~-ratio"), 
+                          "pO~2~/FiO~2~-ratio"), 
                 ytitle = c("Viral~load~(log[10]~copies~per~1000~cells)",
-                           "pO[2]/fiO[2]-ratio"),
+                           "pO[2]/FiO[2]-ratio"),
                 seq = 1:2)
 
 
@@ -156,71 +169,20 @@ rdvlrf <- tibble(population = c("fas_hcq", "fas_rem"),
          margins = map2(data, var, margins_f),
          plot1 = map2(margins, ytitle, plot_cont_margins1),
          plot2 = map2(margins, ytitle, plot_cont_margins2),
-         table = map2(margins, pop_text, mk_table)
+         table = map2(margins, pop_text, mk_table),
+         boxplots = pmap(list(data = data, ytitle = ytitle, var = var), plot_cont_boxplot)
          )
 
+
+
+######################################
+# Make ready for simple analysis with boxplots according to review by Annals of internal Medicine
+#####################################
+
+
+
+
+
+
 readr::write_rds(rdvlrf, "results/rds/rdvlrf.rds")
-
-
-##########################
-# Subgroupanalyses for viral load
-#########################
-
-sg_margins_f <- function(data,
-                      var = "vllog10cpkc_imp", 
-                      sg_var = "sex") {
-  
-  data <- data %>%
-    mutate(rantrt = fct_drop(rantrt)) 
-  
-  x <- glue::glue(
-    "
-gen studyday_ = studyday + 100
-mkspline time_1 4 time_2 8 time_3 = studyday
-mkspline time1 7 time2  = studyday
-
-tempfile tmp1
-tempfile tmp2
-tempfile tmp3
-tempfile tmp4
-tempfile tmp5
-tempfile tmp6
-
-mixed {var} i.rantrt##c.(time_1 time_2 time_3)##i.{sg_var}  || subjectid: 
-margins i.rantrt#i.{sg_var}, over(marginset) saving(`tmp1')
-
-mixed {var} i.rantrt##c.(time1 time2)##i.{sg_var}  || subjectid: studyday, covariance(unstructured)
-margins i.rantrt#i.{sg_var}, dydx(time1) saving(`tmp1')
-margins r.rantrt, dydx(time1) over(i.{sg_var}) saving(`tmp2')
-margins r.rantrt#r.{sg_var}, dydx(time1) saving(`tmp3')
-
-mixed {var} i.rantrt##i.studyday_##i.{sg_var} || subjectid:
-margins i.rantrt#i.{sg_var}, over(studyday_) saving(`tmp6')
-
-use `tmp6', clear
-replace _by1 = _by1 - 100
-save, replace
-
-use `tmp1', clear
-append using `tmp2' `tmp3' `tmp4' `tmp5' `tmp6' , gen(analysis)
-
-"
-  )
-  
-  margins <-  stata(
-    src = x,
-    data.in = data,
-    data.out = TRUE,
-    stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
-    stata.echo = FALSE
-  )
-  
-  res <- margins %>%
-    rename_all(~ str_replace(., "_", "")) %>%
-    select(rantrt = m1 , studyday = by1, margin, ci_lb, ci_ub, pvalue, analysis) 
-  
-  return(res)
-  
-}
 
