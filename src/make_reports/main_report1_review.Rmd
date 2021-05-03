@@ -320,7 +320,8 @@ vl <- vlbl %>%
          diff_10 = value_10 - value_bl) %>% 
   dplyr::select(-starts_with("value_")) %>% 
   tidyr::pivot_longer(cols = c("diff_7", "diff_10"), names_to = "Timepoint") %>% 
-  mutate(Timepoint = factor(Timepoint, levels = c("diff_7", "diff_10")))
+  mutate(Timepoint = str_replace(Timepoint, "diff_", "Day ")) %>% 
+  mutate(Timepoint = factor(Timepoint, levels = c("Day 7", "Day 10")))
 
 
 vl_hcq = vl %>% filter(fas_hcq == "Yes" & !is.na(value))
@@ -399,7 +400,8 @@ pf <- pfbl %>%
          diff_10 = value_10 - value_bl) %>% 
   dplyr::select(-starts_with("value_")) %>% 
   tidyr::pivot_longer(cols = c("diff_7", "diff_10"), names_to = "Timepoint") %>% 
-  mutate(Timepoint = factor(Timepoint, levels = c("diff_7", "diff_10")))
+  mutate(Timepoint = str_replace(Timepoint, "diff_", "Day ")) %>% 
+  mutate(Timepoint = factor(Timepoint, levels = c("Day 7", "Day 10")))
 
 
 pf_hcq = pf %>% filter(fas_hcq == "Yes" & !is.na(value))
@@ -451,6 +453,8 @@ pf_hcq %>% group_by(Timepoint) %>%
 
 23.	Figure 2: Please present the number of patients under observation at each time point separately by arm.
 
+## Viral load
+
 ```{r, results = "asis", warning = FALSE}
 
 advl %>% filter(fas_hcq == "Yes") %>% 
@@ -463,10 +467,11 @@ advl %>% filter(fas_hcq == "Yes") %>%
     epoch == 8 ~ "Day 6 to 10",
     epoch == 15 ~ "Day 11 to 15"
   )) %>% 
-  knitr::kable(caption = "Counts for HCQ", col.names = c("Treatment", "Period", "Number with non-missing values"))
+  knitr::kable(caption = "Counts for HCQ Viral load", col.names = c("Treatment", "Period", "Number with non-missing values"))
 
 advl %>% filter(fas_rem == "Yes") %>% 
-  group_by(rantrt, epoch) %>% 
+  group_by(rantrt, epoch, subjectid) %>% 
+  summarise(n = n(), .groups = "drop_last" ) %>% 
   summarise(n = n(), .groups = "drop_last" ) %>% 
   mutate(epoch = case_when(
     epoch == 0 ~ "Baseline",
@@ -474,8 +479,155 @@ advl %>% filter(fas_rem == "Yes") %>%
     epoch == 8 ~ "Day 6 to 10",
     epoch == 15 ~ "Day 11 to 15"
   )) %>% 
-  knitr::kable(caption = "Counts for remdesivir", col.names = c("Treatment", "Period", "Number of patients with non-missing values"))
+  knitr::kable(caption = "Counts for remdesivir Viral load", col.names = c("Treatment", "Period", "Number of patients with non-missing values"))
   
 
+```
+
+## PF ratio
+
+```{r, results = "asis", warning = FALSE}
+
+adrc %>% filter(fas_hcq == "Yes") %>% 
+  group_by(rantrt, epoch, subjectid) %>% 
+  summarise(n = sum(!is.na(rcratio)), .groups = "drop_last" ) %>% 
+  summarise(n = sum(n>0), .groups = "drop_last" ) %>% 
+  mutate(epoch = case_when(
+    epoch == 0 ~ "Baseline",
+    epoch == 4 ~ "Day 1 to 5",
+    epoch == 8 ~ "Day 6 to 10",
+    epoch == 15 ~ "Day 11 to 15"
+  )) %>% 
+  knitr::kable(caption = "Counts for HCQ PF ratio", col.names = c("Treatment", "Period", "Number with non-missing values"))
+
+adrc %>% filter(fas_rem == "Yes") %>% 
+  group_by(rantrt, epoch, subjectid) %>% 
+  summarise(n = sum(!is.na(rcratio)), .groups = "drop_last" ) %>% 
+  summarise(n = sum(n>0), .groups = "drop_last" ) %>% 
+  mutate(epoch = case_when(
+    epoch == 0 ~ "Baseline",
+    epoch == 4 ~ "Day 1 to 5",
+    epoch == 8 ~ "Day 6 to 10",
+    epoch == 15 ~ "Day 11 to 15"
+  )) %>% 
+  knitr::kable(caption = "Counts for remdesivir PF ratio", col.names = c("Treatment", "Period", "Number of patients with non-missing values"))
+  
+
+```
+
+# 4 Additional secondary endpoints
+4.	Please ensure that the definitions of primary and secondary outcomes exactly match the definitions and naming conventions in the protocol.
+
+The following endpoints are missing: 
+* Time to first receiving and duration of mechanical ventilation
+* Duration of intensive care
+
+## Time to first receiving mechanical ventilation
+
+```{r}
+
+rdev <- read_rds("results/rds/rdev.rds")
+rdev %>%
+   mutate(title = glue::glue("{fname}, {dname}")) %>%
+  select(title, RR, cox_p) %>%
+  knitr::kable(caption = "Relative risks and corresponding p-values",
+               col.names = c("Timeframe, Population", "Relative risk", "P-value"))
+
+
+rdev %>%
+   mutate(title = glue::glue("{fname}, {dname}")) %>%
+  select(title, HR, cox_p) %>%
+  knitr::kable(caption = "Cox hazard ratio estimates and corresponding p-values",
+               col.names = c("Timeframe, Population", "Hazard ratio", "P-value"))
+
+
+
+
+```
+
+## Duration of mechanical ventilation and intensive care
+
+These will only be reported by cumulative probability plots
+
+```{r}
+
+trt_colors <- c(`Standard of care (SOC)`="grey30", `Hydroxychloroquine + SOC` = "blue", `Remdesivir + SOC` = "red")
+
+tmp <- adev %>% 
+  group_by(rantrt) %>% 
+  arrange(mvdur) %>% 
+  mutate(mvdur_cum = row_number()/n()) %>% 
+  arrange(icutime) %>% 
+  mutate(icutime_cum = row_number()/n()) %>% 
+  select(rantrt, fas_hcq, fas_rem, mvdur, mvdur_cum, icutime, icutime_cum)
+tmp_hcq <- tmp %>% filter(fas_hcq == "Yes")
+tmp_rem <- tmp %>% filter(fas_rem == "Yes")
+
+ggplot(aes(x = mvdur_cum, y = mvdur, color = rantrt), data = tmp_hcq  ) + 
+  geom_point(size = 2) +
+  ggpubr::theme_classic2() + 
+  labs(x = "Cumulative percentage of participants", y = "Duration of mechanical ventilation") + scale_color_manual(name = "Treatment", values = trt_colors) +
+  theme(legend.position = "none")
+
+ggsave("results/figures/HCQ Duration of mechanial ventilation.pdf")
+
+ggplot(aes(x = icutime_cum, y = icutime, color = rantrt), data = tmp_hcq ) + 
+  geom_point(size = 2) +
+  ggpubr::theme_classic2() + 
+  labs(x = "Cumulative percentage of participants", y = "Duration of intensice care unit") + scale_color_manual(name = "Treatment", values = trt_colors) +
+  theme(legend.position = "none")
+
+ggsave("results/figures/HCQ Duration of intensive care unit.pdf")
+
+ggplot(aes(x = mvdur_cum, y = mvdur, color = rantrt), data = tmp_rem  ) + 
+  geom_point(size = 2) +
+  ggpubr::theme_classic2() + 
+  labs(x = "Cumulative percentage of participants", y = "Duration of mechanical ventilation") +  scale_color_manual(name = "Treatment", values = trt_colors) +
+  theme(legend.position = "none")
+
+ggsave("results/figures/REM Duration of mechanial ventilation.pdf")
+
+ggplot(aes(x = icutime_cum, y = icutime, color = rantrt), data = tmp_rem ) + 
+  geom_point(size = 2) +
+  ggpubr::theme_classic2() + 
+  labs(x = "Cumulative percentage of participants", y = "Duration of intensice care unit") + scale_color_manual(name = "Treatment", values = trt_colors) +
+  theme(legend.position = "none")
+
+ggsave("results/figures/REM Duration of intensive care unit.pdf")
+
+```
+# Point Estimates
+
+Stats reviewer point 19.	Lines 258-264. Please discuss potential explanations for why the mortality rate in this cohort is substantially lower than in the parent study. Please include point estimates with confidence intervals for each arm in this study population.
+
+The data are presented as in the original report, but with changed confidence intervals. 
+
+```{r}
+rddi <- readr::read_rds("results/rds/rddi.rds")
+
+rddi_tbl <- function(data, pop, text, id) {
+  
+  data %>%
+    filter(pop_text == pop) %>%
+    select(pop_text, Outcome = label, {{text}}, {{id}}) %>%
+    unnest(c({{text}}, {{id}})) %>%
+    pivot_wider(names_from = {{id}}, values_from = {{text}}) %>%
+    select(-pop_text) 
+  
+}
+
+hcq_m <- rddi_tbl(rddi,"Hydroxychloroquine", marglev2, marglev_id)
+hcq_e <- rddi_tbl(rddi,"Hydroxychloroquine", margeff, margeff_id) 
+
+hcq_m %>% 
+  left_join(hcq_e, by = "Outcome") %>% 
+  knitr::kable(caption = "Hydroxychloroquine")
+
+rem_m <- rddi_tbl(rddi,"Remdesivir", marglev2, marglev_id)
+rem_e <- rddi_tbl(rddi,"Remdesivir", margeff, margeff_id) 
+
+rem_m %>% 
+  left_join(rem_e, by = "Outcome") %>% 
+  knitr::kable(caption = "Remdesivir")
 ```
 

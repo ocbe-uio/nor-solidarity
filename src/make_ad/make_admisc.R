@@ -51,7 +51,7 @@ adrc <- adsl %>%
             by = "subjectid") %>% 
   mutate(studyday = eventdate - randt) %>% 
   mutate(epoch = case_when(
-    studyday <= 0 ~ 0,
+    eventid == "V00" ~ 0,
     studyday <= 5 ~ 4,
     studyday <= 10 ~ 8, 
     TRUE ~ 15

@@ -50,6 +50,25 @@ marginlevels_f <- function(data, formula){
   return(levels)
 }
 
+marginlevels2_f <- function(data, formula){
+  formula <- as.formula(str_replace(formula, "~",  "~ -1 + "))
+  
+  res <- glm(formula, data = data, family = binomial)
+  levels <- broom::tidy(res, conf.int = TRUE, exponentiate = TRUE) %>% 
+    mutate(Label = str_remove(term, "rantrt")) %>%
+    select(Label, estimate, conf.low, conf.high) %>% 
+    mutate(across(-Label, ~ .x/(.x + 1))) %>% 
+    mutate(across(-Label, ~ round(.*100, digits = 1))) %>%
+    mutate(txt = paste0(estimate, "% (", conf.low, " to ", conf.high, ")")) %>%
+    select(Label, txt) %>%
+    deframe
+  
+  return(levels)
+}
+
+
+
+
 margineff_f <- function(data, formula){
   formula <- as.formula(formula)
   
@@ -82,6 +101,7 @@ rddi <- tibble(population = c("fas_hcq", "fas_rem"),
          desc_id = map(desc_text, names), 
          formula = glue::glue("{var} == \"{level}\" ~ rantrt"),
          marglev = map2(data, formula, marginlevels_f), 
+         marglev2 = map2(data, formula, marginlevels2_f), 
          marglev_id = map(marglev, names),
          margeff = map2(data, formula, margineff_f), 
          margeff_id = "Estimated marginal treatment effect"
