@@ -60,15 +60,32 @@ icustate <- tdsq %>%
     studyday = eventdate - eventdate[eventid == "V00"],
     sq_admis_max = max(sq_admis[eventid != "V00"], na.rm = TRUE),
     sq_admis_max28 = max(sq_admis[eventid != "V00"& studyday <= 28], na.rm = TRUE),
-    sq_admis_max60 = max(sq_admis[eventid != "V00"& studyday <= 60], na.rm = TRUE)
+    sq_admis_max60 = max(sq_admis[eventid != "V00"& studyday <= 60], na.rm = TRUE),
+    icutime =  sum(sq_admis == "ICU", na.rm = TRUE)
   ) %>% 
   mutate(across(starts_with("sq_admis_"), ~if_else(!is.na(.x), .x, ordered("Ward")))) %>% 
   filter(eventid == "V00") %>% 
-  select(subjectid, starts_with("sq_admis_"))
+  select(subjectid, starts_with("sq_admis_"), icutime)
+
+mvday <- tdrc %>%
+  group_by(subjectid) %>%
+  arrange(subjectid, eventdate) %>%
+  mutate(
+    studyday = eventdate - eventdate[eventid == "V00"],
+    rcwhocps = if_else(is.na(rcwhocps), 0, rcwhocps),
+    cummvtime = cumsum(rcwhocps >= 7),
+    mvday = if_else(cummvtime == 1, studyday, NA_real_)
+  ) %>% 
+  select(subjectid, mvday) %>% 
+  filter(!is.na(mvday))
+
+
+
          
 adev <- adsl %>%
   left_join(survtime, by = "subjectid") %>%
   left_join(icustate, by = "subjectid") %>% 
+  left_join(mvday, by = "subjectid") %>% 
   left_join(tdrc %>% select(subjectid, eventid, eventdate, rcwhocps, rcwhostate), by = "subjectid") %>%
   filter(fas == "Yes") %>%
   group_by(subjectid) %>%
@@ -116,6 +133,12 @@ adev <- adsl %>%
   dischargecens_28 = if_else(dischargeday <= 28, dischargecens, "Yes"),
   #dischargeday_28 = if_else(dischargecens == "No", dischargeday_28, if_else(dischargeday<=28, dischargeday, 28))
   ) %>% 
+  mutate(
+    mvdur = sum(rcwhocps >= 7, na.rm = TRUE),
+    mvdaycens = is.na(mvday),
+    mvtime = if_else(is.na(mvday), as.difftime(28, units = "days"), mvday)
+  ) %>% 
+  
   filter(eventid == "V00") %>%
   select(-studyday, -(eventid:rcwhostate), -starts_with("ranavail"), -(dmicdat:dmini), -(enrolled:fasex2)) %>% 
   ungroup()

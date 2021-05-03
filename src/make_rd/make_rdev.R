@@ -44,8 +44,9 @@ data <- tibble(
 survres <- tibble(
   formula = list( Surv(survtime, survcens == "No") ~ rantrt,
                   Surv(survtime_60, survcens_60 == "No") ~ rantrt, 
-                  Surv(survtime_28, survcens_28 == "No") ~ rantrt),
-  fname = c("Full timeframe", "Censored at 60 days", "Censored at 28 days")
+                  Surv(survtime_28, survcens_28 == "No") ~ rantrt,
+                  Surv(mvtime, mvdaycens == 0) ~ rantrt),
+  fname = c("Full timeframe", "Censored at 60 days", "Censored at 28 days", "Time to first mechanical ventilation (cens 28 days)")
 ) %>% 
   crossing(data) %>% 
   mutate(fit = map2(formula, data, ~surv_fit(formula = .x, data = .y)),
