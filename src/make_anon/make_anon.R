@@ -75,13 +75,13 @@ anonid <- addm %>%
 
 
 anondm <- addm %>% 
-  select(subjectid, rantrt:fas_hcq, dmage, dmicdat.x, bldt, randt, sex, sympdur, starts_with("me"), sq_admis, rcwhocps, 
-         lbcrpres, starts_with("cc")) %>% 
+  select(subjectid, rantrt:fas_hcq, dmage, dmicdat, bldt, randt, sex, sympdur, starts_with("me"), sq_admis, rcwhocps, 
+         lbcrpres, starts_with("cc"), starts_with("ab")) %>% 
   mutate(randyear = lubridate::year(randt),
          randweek = lubridate::isoweek(randt),
          country = "Norway", 
          ethnicity = "Not known") %>%
-  select(-dmicdat.x, -bldt, -randt, -rantrtcd) %>% 
+  select(-dmicdat, -bldt, -randt, -rantrtcd) %>% 
   labelled::set_variable_labels(sympdur = "Symptom duration",
                                 rcwhocps = "WHO clinical progression scale",
                                 randyear = "Year of randomisation",
@@ -274,18 +274,43 @@ anonvl <- anonid %>%
   arrange(anonid)
 
 
+# 􏰀 Total adverse events / serious adverse events by day 28 (using comparable entities across trials; e.g. 
+#                                                              thromboembolic events; analyze number of patients – 
+#                                                              also document number of events; in addition, we will 
+#                                                              check for longer term advers events / serious adverse 
+#                                                              events data and pool data if comparable time points
+#                                                             are available across included trials)
+# 
+
+
+
+
+anonae <-  anonid %>% 
+  left_join(readr::read_rds("data/ad/adae.rds"), by = "subjectid") %>% 
+  filter(!is.na(aespid)) %>% 
+  mutate(studyday_aest = aestdat - randt) %>% 
+  filter(studyday_aest <= 28) %>% 
+  select(anonid, rantrt:fas_hcq, aesevin, aesevext, aeser,aerel, aedis, soc_name, hlgt_name, hlt_name, pt_name) %>% 
+  arrange(anonid)
+
+
+
+
 haven::write_dta(anondm, "data/work/ipdma/anondm.dta")
 haven::write_dta(anoneff, "data/work/ipdma/anoneff.dta")
 haven::write_dta(anonvl, "data/work/ipdma/anonvl.dta")
+haven::write_dta(anonae, "data/work/ipdma/anonae.dta")
 write_rds(anondm, "data/work/ipdma/anondm.rds")
 write_rds(anoneff, "data/work/ipdma/anoneff.rds")
 write_rds(anonvl, "data/work/ipdma/anonvl.rds")
-
+write_rds(anonae, "data/work/ipdma/anonae.rds")
 
 
 
   
 
-# adsl <- read_rds("data/ad/adsl.rds")
+
+
+
 
 
