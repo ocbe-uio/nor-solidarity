@@ -51,6 +51,7 @@ save, replace
 
 use `tmp1', clear
 append using `tmp2' `tmp3' `tmp4' `tmp5' , gen(analysis)
+label drop _append
 
 "
   )
@@ -60,7 +61,7 @@ append using `tmp2' `tmp3' `tmp4' `tmp5' , gen(analysis)
     data.in = data,
     data.out = TRUE,
     stata.path = "/usr/local/bin/stata-se",
-    stata.version = 16,
+    stata.version = 17,
     stata.echo = FALSE
   )
   

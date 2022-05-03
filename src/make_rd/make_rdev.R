@@ -22,7 +22,7 @@ RR_f <- function(diff){
 }
 
 cox_f <- function(tc){
-  if(is.na(tc$p.value))
+  if(is.na(tc$p.value[1]))
     return ("Not applicable")
   
   tc <- slice(tc,1)
@@ -56,7 +56,7 @@ survres <- tibble(
          pval = map_dbl(diff, ~round(1-pchisq(.x$chisq, length(.x$obs)-1), digits = 3)),
          RR = map_chr(diff, ~RR_f(.x)),
          coxfit = map2(formula, data, ~coxph(formula = .x, data = .y)),
-         tidycox = map(coxfit, broom::tidy, conf.int = "TRUE"),
+         tidycox = map(coxfit, broom::tidy, conf.int = "TRUE"), 
          cox_txt = map(tidycox, cox_f),
          HR = map_chr(cox_txt, ~.x$txt),
          cox_p = map_dbl(cox_txt, ~round(.x$pval, digits = 3)),
