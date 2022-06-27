@@ -43,6 +43,7 @@
 
 library(readr)
 library(tidyverse)
+library(labelled)
 
 #Baseline information
 
@@ -88,7 +89,21 @@ anondm <- addm %>%
                                 randweek = "Randomisation Week", 
                                 country = "Country",
                                 ethnicity = "Ethnicity")  
-
+tdab <- read_rds("data/td/tdab.rds")
+tdab_bl <- tdab %>% 
+  filter(studyday == 1) %>% 
+  mutate(abseroc = if_else(abrbd < 5, "RBD < 5", "RBD ≥ 5"),
+         abseroc = factor(abseroc),
+         abcapsidd = if_else(abcapsid < 10, "Capsid < 10", "Capsid ≥ 10"),
+         abcapsidd = factor(abcapsidd)) %>% 
+  select(subjectid, abrbd, abcapsid, abace2rbd, absumctr) %>% 
+  set_variable_labels(absumctr = "Sum Controls",
+                      abrbd = "Receptor-binding Domain",
+                      abace2rbd = "Angiotensin converting enzyme 2 (ACE2)",
+                      abcapsid = "Nucleocapsid (mammalian expr)")
+anondm <- anondm %>% 
+  left_join(tdab_bl, by = "subjectid") %>% 
+  relocate(abrbd:absumctr, .after = cc_eversmoker)
 
 
 # Efficacy
