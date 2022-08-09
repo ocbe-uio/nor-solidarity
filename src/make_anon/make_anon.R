@@ -118,7 +118,7 @@ adev <- read_rds("data/ad/adev.rds")
 
 
 mort <- adev %>% 
-  select(subjectid, survtime_60:survcens_28, dischargeday_28, dischargecens_28)
+  select(subjectid, survtime:survcens_28, dischargeday_28, dischargecens_28)
 
 # 
 
