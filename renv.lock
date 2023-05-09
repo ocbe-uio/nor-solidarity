@@ -1211,13 +1211,8 @@
     },
     "nloptr": {
       "Package": "nloptr",
-      "Version": "2.0.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "6e45c045fea34a9d0d1ceaa6fb7c4e91",
-      "Requirements": [
-        "testthat"
-      ]
+      "Version": "2.0.3",
+      "Source": "Repository"
     },
     "nnet": {
       "Package": "nnet",
@@ -1480,11 +1475,8 @@
     },
     "renv": {
       "Package": "renv",
-      "Version": "0.15.4",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "c1078316e1d4f70275fc1ea60c0bc431",
-      "Requirements": []
+      "Version": "0.17.2",
+      "Source": "Repository"
     },
     "reprex": {
       "Package": "reprex",
