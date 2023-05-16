@@ -50,7 +50,7 @@ adprom <- read_rds("data/ad/adprom.rds")
 source("src/External/functions.R", local = knitr::knit_global())
 export_date = substr(params$viedoc_export,5,19) %>% lubridate::as_datetime()
 if(params$pseudorandom) {
-  pr_text = "While the results are based on real data, the treatment allocation has been drawn randomly for this report. Thus, this is a mock-up report intended to show how the final report will look like, without showing the actual results of the trial and the treatment differences."
+  pr_text = "While the results are based on real data, the treatment allocation has been drawn randomly for this report. Thus, this is a mock-up report intended to show how the final report will look, without showing the actual results of the trial and the treatment differences."
 } else {
   pr_text = "The results in this report is according to the true random allocation. "
 }
@@ -109,7 +109,7 @@ adprom_rem <- adprom %>%
 ```
 
 ```{r headers}
-arms_tot <- c("Remdesivir", "SOC ± HQ")
+arms_tot <- c("Remdesivir", "SOC ± HCQ")
 total_n <- n_distinct(adprom$subjectid)
 
 arms_all <- "All patients"
@@ -334,7 +334,7 @@ These will be imputed with proper values.
 
 ### Analyses
 
-The primary nalyses according to the Statistical Analysis Plan (SAP) is
+The primary analyses according to the Statistical Analysis Plan (SAP) is
 that the groups will be compared using t-test and the difference in
 means will be presented with 95% confidence intervals based on the
 t-distribution for the difference. We will implement it using the
