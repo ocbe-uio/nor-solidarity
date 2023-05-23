@@ -8,7 +8,7 @@ output:
     toc: TRUE
 params:
   viedoc_export: ous_20210104_003034
-  pseudorandom: TRUE
+  pseudorandom: FALSE
 editor_options: 
   markdown: 
     wrap: 72
@@ -29,7 +29,7 @@ library(survminer)
 library(mice)
 library(marginaleffects)
 
-prom_seed <- 123
+prom_seed <- 2023051
 
 ```
 
@@ -73,9 +73,7 @@ least one PROM record.
 
 ```{r by-treatment, echo = FALSE}
 
-adprom %>%6
-3
-02203*3
+adprom %>% 
   filter(fas == "Yes") %>%
   group_by(rantrt) %>%
   summarise(n=n(), .groups = "drop_last") %>%
@@ -313,7 +311,7 @@ primary_vars <- tibble(
 
 ```{r}
 
-set.seed(123)
+set.seed(20230518)
 
 cat_imp0 <- adprom_rem %>% 
   filter(ranavail_rem == "Yes") %>% 

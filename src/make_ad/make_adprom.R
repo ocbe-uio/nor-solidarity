@@ -17,15 +17,15 @@ source("src/external/functions.R")
 #######################
 # Set this parameter to false in the Makefile to run the true allocation results.
 #######################
-
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args)==0) {
-  pseudorand <- TRUE #default to pseudorandom treatment
-  set.seed(42)
-} else if (length(args) != 0) {
-  pseudorand <- args[1]
-  set.seed(42)
-}
+# 
+# args <- commandArgs(trailingOnly = TRUE)
+# if (length(args)==0) {
+#   pseudorand <- TRUE #default to pseudorandom treatment
+#   set.seed(42)
+# } else if (length(args) != 0) {
+#   pseudorand <- args[1]
+#   set.seed(42)
+# }
 
 
 
@@ -77,36 +77,36 @@ adprom <- adsl %>%
   mutate(hospdur = dphstdt - randt)
 
 
-###############
-# Set up the pseudorandomisation list. 
-##############
-
-print(paste0("Pseudorandomisation is ", pseudorand))
-
-if (pseudorand) {
-  
-  varlabels <- labelled::var_label(adprom, unlist = TRUE)
-  varorder <- names(adprom)
-   
-  print(paste0("Seed is ", set.seed))  
-  
-  set.seed
-  adprom2 <- adprom %>%
-    select(subjectid, rantrt:fas_hcq) %>% 
-    group_by(subjectid) %>% 
-    nest() %>% 
-    ungroup() %>% 
-    mutate(subjectid = sample(subjectid, n(), replace = FALSE)) %>% 
-    unnest(data) 
-  
-  adprom <- adprom %>% 
-    select(- (rantrt:fas_hcq)) %>% 
-    left_join(adprom2, by = "subjectid") %>% 
-    relocate(all_of(varorder))
-  
-  labelled::var_label(adprom) <- varlabels
-  
-}
+# ###############
+# # Set up the pseudorandomisation list. 
+# ##############
+# 
+# print(paste0("Pseudorandomisation is ", pseudorand))
+# 
+# if (pseudorand) {
+#   
+#   varlabels <- labelled::var_label(adprom, unlist = TRUE)
+#   varorder <- names(adprom)
+#    
+#   print(paste0("Seed is ", set.seed))  
+#   
+#   set.seed
+#   adprom2 <- adprom %>%
+#     select(subjectid, rantrt:fas_hcq) %>% 
+#     group_by(subjectid) %>% 
+#     nest() %>% 
+#     ungroup() %>% 
+#     mutate(subjectid = sample(subjectid, n(), replace = FALSE)) %>% 
+#     unnest(data) 
+#   
+#   adprom <- adprom %>% 
+#     select(- (rantrt:fas_hcq)) %>% 
+#     left_join(adprom2, by = "subjectid") %>% 
+#     relocate(all_of(varorder))
+#   
+#   labelled::var_label(adprom) <- varlabels
+#   
+# }
 
 
 
@@ -117,7 +117,7 @@ adprom <- adprom %>%
          in_qol = if_else(in_qol, TRUE, FALSE, missing = FALSE),
          in_prom = if_else(in_cat | in_qol, TRUE, FALSE)) %>% 
   mutate(rantrt2 = if_else(rantrtcd ==3, "Remdesivir", "SOC ± HCQ"),
-         rantrt2 = factor(rantrt2, levels = c("Remdesivir", "SOC ± HCQ"), ordered = TRUE)) %>% 
+         rantrt2 = factor(rantrt2, levels = c("Remdesivir", "SOC ± HCQ"), ordered = FALSE)) %>% 
   mutate(across(starts_with("copd") & ends_with("_m1"), ~replace(., is.na(.) & survcens_28 == "No", 5))) %>% #impute worst case outcome for death
   mutate(across(starts_with("copd") & ends_with("_m3"), ~replace(., is.na(.) & survcens_60 == "No", 5))) %>% #impute worst case outcome for death
   mutate(across(starts_with("total_m1"), ~replace(., is.na(.) & survcens_28 == "No", 40))) %>% #impute worst case outcome for death
