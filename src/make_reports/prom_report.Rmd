@@ -28,8 +28,9 @@ library(survival)
 library(survminer)
 library(mice)
 library(marginaleffects)
+library(forestplot)
 
-prom_seed <- 2023051
+prom_seed <- 20230518
 
 ```
 
@@ -475,7 +476,10 @@ The subgroup analysis will be performed by an Analysis of Covariance
 model including a treatment / subgroup interaction term. Missing data
 will be handled using MICE as it was for the primary endpoint.
 
+
+
 ```{r}
+
 
 
 f_subgroup <- function(impds, var, subgroup, digits){
@@ -497,7 +501,7 @@ f_subgroup <- function(impds, var, subgroup, digits){
   res <- res_sg %>%
     mutate(txt = paste0(round(estimate, digits = digits), " (95% CI ", round(conf.low, digits = digits),
                       " to ", round(conf.high, digits = digits), ")")) %>%
-    select(contrast, subgroup, txt, p.value) %>%
+    select(contrast, subgroup, txt, p.value, estimate, conf.low, conf.high ) %>%
     mutate(pval_interaction = as.double(pval)) 
 
   return(res)
@@ -511,13 +515,13 @@ f_subgroup <- function(impds, var, subgroup, digits){
 )
 
 subgroup_vars <- tibble(
-  subgroup = c("rcwhostate", "age_cat", "sympdur_cat", "vl_cat", "crp_cat", "fer_cat"),
-    label_sg = c("WHO state at baseline (Moderate vs Severe)",
-              "Symptom duration at baseline (< 7 days vs ≥7 days)",
-              "Age at baseline (< 60 vs ≥ 60 years)", 
-              "Viral load at baseline (< overall median vs ≥ overall median)",
-              "CRP at baseline (< overall median vs ≥ overall median)",
-              "Ferritin at baseline (< overall median vs ≥ overall median)")
+  subgroup = c("rcwhostate",  "sympdur_cat", "age_cat", "vl_cat", "crp_cat", "fer_cat"),
+    label_sg = c("WHO state at baseline",
+              "Symptom duration at baseline ",
+              "Age at baseline ", 
+              "Viral load at baseline ",
+              "CRP at baseline ",
+              "Ferritin at baseline ")
 )  
   
   
@@ -525,19 +529,171 @@ subgroup_vars <-  crossing(primary_vars, subgroup_vars) #%>%
   #filter(subgroup_ != "rcwhostage")
 
 
-subgroup_vars %>% 
+subgroup_res <- subgroup_vars %>% 
   mutate(result = pmap(list(impds = list(catimp2), var = var, subgroup = subgroup, digits = 2), f_subgroup)) %>% 
   unnest(cols = result) %>% 
-  select(-var, -subgroup) %>%
   mutate(Category = paste0(age_cat, crp_cat,fer_cat, rcwhostate, sympdur_cat, vl_cat ),
          Category = str_remove_all(Category, "NA")) %>% 
-  select(-ends_with("_cat"), -rcwhostate) %>% 
+  mutate(pos = 1)
+  
+
+
+
+empty <- subgroup_res %>% 
+  mutate(pos = -1) %>% 
+  mutate(across(4:(ncol(subgroup_res)-1), ~ NA)) %>% 
+  unique()
+
+
+
+empty2 <- subgroup_res %>% 
+  mutate(pos = 0) %>% 
+  mutate(across(!any_of(c("var", "label", "subgroup", "label_sg", "pval_interaction", "pos")), ~ NA)) %>% 
+  unique()
+
+
+header <- subgroup_res %>% 
+  mutate(across(!any_of(c("var")), ~ NA)) %>% 
+  mutate(labtxt = "Subgroup", 
+          pval = "p-value interaction",
+          pos = -2,
+         subgroup = "aaa") %>% 
+  unique()
+
+fplot <- subgroup_res %>% 
+  add_row(empty) %>% 
+  add_row(empty2) %>% 
+  mutate(labtxt = if_else(is.na(Category), label_sg, paste0("  ",Category)),
+         pval = if_else(is.na(Category), round(pval_interaction, digits = 2), NA),
+         pval = as.character(pval)) %>% 
+  add_row(header) %>% 
+  arrange(var, subgroup, pos)
+
+
+```
+
+
+#### Coughing
+
+```{r}
+
+
+  subgroup_res %>% 
+  filter(var == "copd1_m3") %>% 
+  select(-var, -subgroup, -estimate, -conf.low, -conf.high) %>%
+  select(-ends_with("_cat"), -rcwhostate, -pos) %>% 
   select(label, label_sg, Category, contrast, everything()) %>% 
    knitr::kable(caption = "Subgroup-analyses",
                col.names = c("Variable", "Subgroup", "Category", "Contrast", "Difference with 95% CI", "P-value", "P-value interaction"))
 
+```
+
+```{r, out.width="100%", fig.cap = "CAT Coughing"}
 
 
+fplot %>% 
+  filter(var == "copd1_m3") %>% 
+  forestplot(labeltext = c(labtxt, pval),
+             graph.pos = 2,
+           mean = estimate, 
+           lower = conf.low,
+           upper = conf.high,
+           title="Difference (95% CI)",
+           xlab="<---Placebo Better---    ---Remdesivir Better--->                ",
+           hrzl_lines=list("3" = gpar(lwd=1, col="#99999922"),
+                          "4" = gpar(lwd=40, lineend="butt",  col="#99999922"),
+                          "12" = gpar(lwd=40, lineend="butt",  col="#99999922"),
+                          "20" = gpar(lwd=40, lineend="butt",  col="#99999922")
+                          ),
+           txt_gp=fpTxtGp(label=gpar(cex=0.8),
+                              ticks=gpar(cex=1.1),
+                              xlab=gpar(cex = 1.0),
+                              title=gpar(cex = 1.2)),
+           col=fpColors(box="black", lines="black", zero = "gray50"),
+           zero=0, cex=0.9, lineheight = "auto", colgap=unit(6,"mm"),
+            lwd.ci=2, ci.vertices=TRUE, ci.vertices.height = 0.4, 
+           clip = c(-3, 3)
+           )
+
+```
+
+
+#### Shortness of breath
+```{r, out.width="100%", fig.cap = "CAT Shortness of breath"}
+
+
+
+  subgroup_res %>% 
+  filter(var == "copd4_m3") %>% 
+  select(-var, -subgroup, -estimate, -conf.low, -conf.high) %>%
+  select(-ends_with("_cat"), -rcwhostate, -pos) %>% 
+  select(label, label_sg, Category, contrast, everything()) %>% 
+   knitr::kable(caption = "Subgroup-analyses",
+               col.names = c("Variable", "Subgroup", "Category", "Contrast", "Difference with 95% CI", "P-value", "P-value interaction"))
+
+fplot %>% 
+  filter(var == "copd4_m3") %>% 
+  forestplot(labeltext = c(labtxt, pval),
+             graph.pos = 2,
+           mean = estimate, 
+           lower = conf.low,
+           upper = conf.high,
+           title="Difference (95% CI)",
+           xlab="<---Placebo Better---    ---Remdesivir Better--->                ",
+           hrzl_lines=list("3" = gpar(lwd=1, col="#99999922"),
+                          "4" = gpar(lwd=40, lineend="butt",  col="#99999922"),
+                          "12" = gpar(lwd=40, lineend="butt",  col="#99999922"),
+                          "20" = gpar(lwd=40, lineend="butt",  col="#99999922")
+                          ),
+           txt_gp=fpTxtGp(label=gpar(cex=0.8),
+                              ticks=gpar(cex=1.1),
+                              xlab=gpar(cex = 1.0),
+                              title=gpar(cex = 1.2)),
+           col=fpColors(box="black", lines="black", zero = "gray50"),
+           zero=0, cex=0.9, lineheight = "auto", colgap=unit(6,"mm"),
+            lwd.ci=2, ci.vertices=TRUE, ci.vertices.height = 0.4, 
+           clip = c(-3, 3)
+           )
+
+```
+
+
+#### Fatigue
+```{r , out.width="100%", fig.cap = "CAT Fatigue"}
+
+
+
+  subgroup_res %>% 
+  filter(var == "copd8_m3") %>% 
+  select(-var, -subgroup, -estimate, -conf.low, -conf.high) %>%
+  select(-ends_with("_cat"), -rcwhostate, -pos) %>% 
+  select(label, label_sg, Category, contrast, everything()) %>% 
+   knitr::kable(caption = "Subgroup-analyses",
+               col.names = c("Variable", "Subgroup", "Category", "Contrast", "Difference with 95% CI", "P-value", "P-value interaction"))
+
+fplot %>% 
+  filter(var == "copd8_m3") %>% 
+  forestplot(labeltext = c(labtxt, pval),
+             graph.pos = 2,
+           mean = estimate, 
+           lower = conf.low,
+           upper = conf.high,
+           title="Difference (95% CI)",
+           xlab="<---Placebo Better---    ---Remdesivir Better--->                ",
+           hrzl_lines=list("3" = gpar(lwd=1, col="#99999922"),
+                          "4" = gpar(lwd=40, lineend="butt",  col="#99999922"),
+                          "12" = gpar(lwd=40, lineend="butt",  col="#99999922"),
+                          "20" = gpar(lwd=40, lineend="butt",  col="#99999922")
+                          ),
+           txt_gp=fpTxtGp(label=gpar(cex=0.8),
+                              ticks=gpar(cex=1.1),
+                              xlab=gpar(cex = 1.0),
+                              title=gpar(cex = 1.2)),
+           col=fpColors(box="black", lines="black", zero = "gray50"),
+           zero=0, cex=0.9, lineheight = "auto", colgap=unit(6,"mm"),
+            lwd.ci=2, ci.vertices=TRUE, ci.vertices.height = 0.4, 
+           clip = c(-3, 3)
+           )
 
 ```
 
@@ -676,3 +832,99 @@ sec_vars_sf36 %>%
                col.names = c("Variable", "Analysis", "Difference with 95% CI", "P-value"))
 
 ```
+
+
+# Supplementary analyses
+
+## HCG vs SoC
+
+```{r}
+
+descriptives2 <- function(data = adprom,
+                              var = "copd8_m3",
+                              digits = 1) {
+  var <- ensym(var)
+  
+  data <- data %>%
+    mutate(rantrt = fct_drop(rantrt)) %>%
+    select(!!var, subjectid,  rantrt) %>%
+    group_by(rantrt) %>%
+    summarise(
+      mean = mean(!!var, na.rm = TRUE),
+      sd = sd(!!var, na.rm = TRUE),
+      median = median(!!var, na.rm = TRUE),
+      q1 = quantile(!!var, 1 / 4, na.rm = TRUE),
+      q3 = quantile(!!var, 3 / 4, na.rm = TRUE),
+      missing = sum(is.na(!!var)), 
+      nonmissing = sum(!is.na(!!var)),
+      .groups = "drop_last"
+    ) %>%
+    ungroup() %>%
+    mutate(across(mean:q3, ~ round(., digits = digits))) %>%
+    mutate(
+      'Mean (SD)' = paste0(mean, " (", sd, ")"),
+      'Median [IQR]' = paste0(median, " [", q1, " - ", q3, "]"),
+      'Missing / Non-Missing'  = paste0(as.character(missing), " / ", as.character(nonmissing))
+    ) %>%
+    select(-(mean:nonmissing)) %>%
+    pivot_longer('Mean (SD)':'Missing / Non-Missing', names_to = "Statistic") %>%
+    select(rantrt, Statistic, value) %>%
+    pivot_wider(
+      id_cols = Statistic,
+      names_from = rantrt,
+      values_from = value
+    )
+  
+  return(data)
+}
+
+
+
+primary_vars <- tibble(
+  var = c("copd8_m3", "copd4_m3", "copd1_m3"), 
+  label = c("CAT Fatigue at 3 months", "CAT shortness of breath at 3 months", "CAT Coughing at 3 months")
+)
+  
+  
+ primary_vars %>% 
+   mutate(desc = pmap(list(data = list(adprom_rem %>% filter(rantrt != "Remdesivir + SOC")), var = var, digits = 1), descriptives2)) %>% 
+   unnest(cols = desc) %>% 
+   select(-var) %>% 
+   knitr::kable()
+  
+
+
+
+
+analysis_sup <- function(impds, var, digits){
+  var <- ensym(var)
+  
+  res2 <- with(impds %>% 
+                 filter(rantrt != "Remdesivir + SOC"), inject(lm(!!var ~ rantrt))) %>% 
+    pool() %>% 
+    summary(conf.int = TRUE) %>% 
+    filter(str_starts(term, "rantrt")) %>% 
+    mutate(txt = glue(round(estimate, digits = digits), " (95% CI ", round(`2.5 %`, digits = digits), " to ", round(`97.5 %`, digits = digits), ")")) %>% 
+    mutate(analysis = "SOC vs HCQ") %>% 
+    select(analysis, txt, p.value) 
+  
+  
+  res <-  as_tibble(res2) 
+  
+  return(res)
+}
+
+
+
+tmp <- analysis_sup(catimp2, "copd1_m3", digits = 2)
+  
+tmp<- primary_vars %>% 
+   mutate(analysis = pmap(list(impds = list(catimp2), var = var, digits = 2), analysis_sup)) %>% 
+   unnest(cols = analysis) %>% 
+   select(-var) %>% 
+   knitr::kable(caption = "Supplementary analysis, HCQ vs SoC",
+               col.names = c("Variable", "Analysis", "Difference with 95% CI", "P-value"))
+  
+tmp
+```
+
