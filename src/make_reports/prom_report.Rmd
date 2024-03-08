@@ -30,7 +30,7 @@ library(mice)
 library(marginaleffects)
 library(forestplot)
 
-prom_seed <- 20230518
+prom_seed <- 2023051 #Note that the seed misses an 8 on the end. Have run the code with the 8 without the results changing conclusions. 
 
 ```
 
@@ -40,6 +40,7 @@ tddm <- read_rds("data/td/tddm.rds")
 tdran <- read_rds("data/td/tdran.rds")
 raw <- read_rds("data/raw/raw.rds")
 adsl <- read_rds("data/ad/adsl.rds")
+adsl_all <- read_rds("data/ad/adsl_all.rds")
 adex <- read_rds("data/ad/adex.rds")
 adae <- read_rds("data/ad/adae.rds")
 tdex <- read_rds("data/td/tdex.rds")
@@ -47,6 +48,8 @@ addm <- read_rds("data/ad/addm.rds")
 adev <- read_rds("data/ad/adev.rds")
 tdds <- read_rds("data/td/tdds.rds")
 adprom <- read_rds("data/ad/adprom.rds")
+adprom_noimp <- read_rds("data/ad/adprom_noimp.rds")
+source("src/external/functions.R")
 
 source("src/External/functions.R", local = knitr::knit_global())
 export_date = substr(params$viedoc_export,5,19) %>% lubridate::as_datetime()
@@ -316,7 +319,7 @@ set.seed(20230518)
 
 cat_imp0 <- adprom_rem %>% 
   filter(ranavail_rem == "Yes") %>% 
-  select(subjectid, rantrt, rantrt2, age_calc, sex, hospdur, dphdisc, rcwhocps, sympdur, survcens, survtime, rcwhostate, age_cat, sympdur_cat, vl_cat, crp_cat, fer_cat, any_of(starts_with(c("copd"))), total_m1, total_m3) 
+  select(subjectid, rantrt, rantrt2, age_calc, sex, hospdur, dphdisc, oxygen, rcwhocps, sympdur, survcens, survtime, rcwhostate, age_cat, age2_cat, sympdur_cat, vl_cat, crp_cat, fer_cat, any_of(starts_with(c("copd"))), total_m1, total_m3) 
 
 
 cat_imp0 %>% 
@@ -460,11 +463,13 @@ primary_vars <- tibble(
 Subgroup analyses will be performed according to the following
 subgroups: \*
 
--   WHO state at baseline (Moderate vs Severe)
+-   Ventilation at baseline (No or low-flow oxygen vs intensive ventilation)
 
 -   Symptom duration at baseline (\< 7 days vs ≥7 days)
 
 -   Age at baseline (\< 60 vs ≥ 60 years)
+
+-   Age at baseline (\< 65 vs ≥ 65 years)
 
 -   Viral load at baseline (\< overall median vs ≥ overall median)
 
@@ -515,10 +520,11 @@ f_subgroup <- function(impds, var, subgroup, digits){
 )
 
 subgroup_vars <- tibble(
-  subgroup = c("rcwhostate",  "sympdur_cat", "age_cat", "vl_cat", "crp_cat", "fer_cat"),
-    label_sg = c("WHO state at baseline",
+  subgroup = c("oxygen",  "sympdur_cat", "age_cat", "age2_cat", "vl_cat", "crp_cat", "fer_cat"),
+    label_sg = c("Ventilation at baseline",
               "Symptom duration at baseline ",
               "Age at baseline ", 
+              "Age at baseline",
               "Viral load at baseline ",
               "CRP at baseline ",
               "Ferritin at baseline ")
@@ -532,7 +538,7 @@ subgroup_vars <-  crossing(primary_vars, subgroup_vars) #%>%
 subgroup_res <- subgroup_vars %>% 
   mutate(result = pmap(list(impds = list(catimp2), var = var, subgroup = subgroup, digits = 2), f_subgroup)) %>% 
   unnest(cols = result) %>% 
-  mutate(Category = paste0(age_cat, crp_cat,fer_cat, rcwhostate, sympdur_cat, vl_cat ),
+  mutate(Category = paste0(age_cat, age2_cat, crp_cat,fer_cat, oxygen, sympdur_cat, vl_cat ),
          Category = str_remove_all(Category, "NA")) %>% 
   mutate(pos = 1)
   
@@ -581,7 +587,7 @@ fplot <- subgroup_res %>%
   subgroup_res %>% 
   filter(var == "copd1_m3") %>% 
   select(-var, -subgroup, -estimate, -conf.low, -conf.high) %>%
-  select(-ends_with("_cat"), -rcwhostate, -pos) %>% 
+  select(-ends_with("_cat"), -oxygen, -pos) %>% 
   select(label, label_sg, Category, contrast, everything()) %>% 
    knitr::kable(caption = "Subgroup-analyses",
                col.names = c("Variable", "Subgroup", "Category", "Contrast", "Difference with 95% CI", "P-value", "P-value interaction"))
@@ -626,7 +632,7 @@ fplot %>%
   subgroup_res %>% 
   filter(var == "copd4_m3") %>% 
   select(-var, -subgroup, -estimate, -conf.low, -conf.high) %>%
-  select(-ends_with("_cat"), -rcwhostate, -pos) %>% 
+  select(-ends_with("_cat"), -oxygen, -pos) %>% 
   select(label, label_sg, Category, contrast, everything()) %>% 
    knitr::kable(caption = "Subgroup-analyses",
                col.names = c("Variable", "Subgroup", "Category", "Contrast", "Difference with 95% CI", "P-value", "P-value interaction"))
@@ -666,7 +672,7 @@ fplot %>%
   subgroup_res %>% 
   filter(var == "copd8_m3") %>% 
   select(-var, -subgroup, -estimate, -conf.low, -conf.high) %>%
-  select(-ends_with("_cat"), -rcwhostate, -pos) %>% 
+  select(-ends_with("_cat"), -oxygen, -pos) %>% 
   select(label, label_sg, Category, contrast, everything()) %>% 
    knitr::kable(caption = "Subgroup-analyses",
                col.names = c("Variable", "Subgroup", "Category", "Contrast", "Difference with 95% CI", "P-value", "P-value interaction"))
@@ -927,4 +933,223 @@ tmp<- primary_vars %>%
   
 tmp
 ```
+
+# Communications Medicine review
+
+# Ref1 comment 2
+
+Reviewer's comment: "I have a major issue regarding the handling of missing data due to death. Imputing data with worst outcome seems highly biased, as it could possibly hide a potential efficacy or suggest a potential harm of treatment where none exists. I would suggest the authors use another imputation method to handle these data. Especially, adaptations of the MICE algorithms have been specially developed to handle MNAR data, such as NARFCS (see PMID: 29611205)."
+
+While we disagree with the reviewer on this point, we will do the analysis using the suggested method (NARFCS). We use standard multiple imputation with chained equations as defined in the primary analysis, but put a shift on the imputed values for subjects who had missing data due to death. We used shift parameters of 
+
+```{r}
+
+
+rev_cat_imp0 <- adprom_noimp %>% 
+  filter(ranavail_rem == "Yes") %>% 
+  select(subjectid, rantrt, rantrt2, age_calc, sex, hospdur, dphdisc, rcwhocps, sympdur, survcens, survtime, rcwhostate, age_cat, sympdur_cat, vl_cat, crp_cat, fer_cat, any_of(starts_with(c("copd"))), total_m1, total_m3) 
+
+rev_cat_imp <- rev_cat_imp0 %>% 
+  mutate(hospdur = if_else(survcens == "Yes", hospdur, survtime),
+         dphdisc = fct_expand(dphdisc, "NA (death)"),
+         dphdisc = if_else(survcens == "Yes", dphdisc, "NA (death)"), 
+         dphdisc = factor(dphdisc), 
+         hospdur = as.numeric(hospdur),
+         sympdur = as.numeric(sympdur),
+         dphdisc = fct_recode(dphdisc, H1 = "Home", H2 = "Home, requiring municipal assistance",  Reh = "Municipal rehabilitation/nursing home", Death = "NA (death)", Rec = "Recreation stay")) %>% 
+  select(-survcens, -survtime) %>% 
+  select(subjectid:fer_cat, copd8_m3, copd4_m3, copd1_m3) 
+
+
+rev_catimp1 <- mice(rev_cat_imp, maxit = 0)
+rev_predM <- rev_catimp1$predictorMatrix
+
+#remove treatment and others from predictor matrix
+rev_predM[, c("rantrt2")] <- 0
+rev_predM[, c("subjectid")] <- 0
+rev_predM[, c("rantrt")] <- 0
+rev_predM[, c("age_cat")] <- 0
+rev_predM[, c("sympdur_cat")] <- 0
+
+mortality <- rev_cat_imp %>% 
+  mutate(mort = if_else(dphdisc=="Death", 1, 0, 0)) %>% 
+  select(mort) %>% 
+  as.matrix()
+
+methods1 <- rev_catimp1$method
+mnar_methods <- methods1 %>% 
+  enframe() %>% 
+  mutate(value = if_else(value == "pmm" & str_detect(name, "copd"), "mnar.norm", value)) %>% 
+  deframe()
+
+mnar.blot1 <- list(
+copd1_m3 = list(ums = "0+1*mort", umx = mortality),
+copd4_m3 = list(ums = "0+1*mort", umx = mortality),
+copd8_m3 = list(ums = "0+1*mort", umx = mortality))
+
+mnar.blot2 <- list(
+copd1_m3 = list(ums = "0+2*mort", umx = mortality),
+copd4_m3 = list(ums = "0+2*mort", umx = mortality),
+copd8_m3 = list(ums = "0+2*mort", umx = mortality))
+
+mnar.blot3 <- list(
+copd1_m3 = list(ums = "0+3*mort", umx = mortality),
+copd4_m3 = list(ums = "0+3*mort", umx = mortality),
+copd8_m3 = list(ums = "0+3*mort", umx = mortality))
+
+
+rev_catimp1 <- mice(rev_cat_imp, maxit = 10, method = mnar_methods,  print = FALSE, blots = mnar.blot1, m = 10, seed = prom_seed)
+
+rev_catimp2 <- mice(rev_cat_imp, maxit = 10, method = mnar_methods,  print = FALSE, blots = mnar.blot2, m = 10, seed = prom_seed)
+
+rev_catimp3 <- mice(rev_cat_imp, maxit = 10, method = mnar_methods,  print = FALSE, blots = mnar.blot3, m = 10, seed = prom_seed)
+
+rev_primary_vars <- tibble(
+  var = c("copd8_m3", "copd4_m3", "copd1_m3"), 
+  label = c("CAT Fatigue at 3 months", "CAT shortness of breath at 3 months", "CAT Coughing at 3 months")
+)
+  
+
+
+rev_primary_vars %>% 
+   mutate(analysis = pmap(list(impds = list(rev_catimp1), var = var, digits = 2), analysis)) %>% 
+   unnest(cols = analysis) %>% 
+   select(-var) %>% 
+   knitr::kable(caption = "Sensitivity estimands of the primary analysis using NARFCS with shift-parameter delta = 1",
+               col.names = c("Variable", "Analysis", "Difference with 95% CI", "P-value"))
+  
+
+rev_primary_vars %>% 
+   mutate(analysis = pmap(list(impds = list(rev_catimp2), var = var, digits = 2), analysis)) %>% 
+   unnest(cols = analysis) %>% 
+   select(-var) %>% 
+   knitr::kable(caption = "Sensitivity estimands of the primary analysis using NARFCS with shift-parameter delta = 2",
+               col.names = c("Variable", "Analysis", "Difference with 95% CI", "P-value"))
+  
+
+rev_primary_vars %>% 
+   mutate(analysis = pmap(list(impds = list(rev_catimp3), var = var, digits = 2), analysis)) %>% 
+   unnest(cols = analysis) %>% 
+   select(-var) %>% 
+   knitr::kable(caption = "Sensitivity estimands of the primary analysis using NARFCS with shift-parameter delta = 3",
+               col.names = c("Variable", "Analysis", "Difference with 95% CI", "P-value"))
+  
+
+
+```
+## Ref 1 comment 4
+
+Comment: "A recent meta-analysis (PMID: 36828006) showed that remdesivir could reduce mortality in hospitalized patients depending on the oxygen support needed. Could the authors perform a supplementary subgroup analysis regarding this stratum?"
+
+Added a sub-group analysis on 1) No ventilation at baseline: No or only low−flow oxygen or 2) Ventilation at baseline: High−flow or non−invasive ventilation, mechanical ventilation, ECMO
+See subgroup analysis
+
+## Ref 2 Comment 2
+
+Comment: - The trial is open label, which may pose problems of performance bias and measurement bias. This is mentionned in limitations. If the data is available, it would be interesting to know and compare co-interventions received in the two groups (I believe that Table 1 only reports cointerventions at baseline)
+
+
+Add an overview of co-medication while hospitalised. 
+
+```{r, include = FALSE}
+cm <- raw %>% 
+  pick("cm")
+
+items <- raw %>% pick("items")
+
+tdcm <- raw %>% pick("cm") %>% 
+  left_join(pick(raw,"atc_without_ddd")) %>% 
+  select(-(eventid:designversion), -(siteseq:subjectseq), -(formid:itemname)) %>% 
+  labeliser() %>% 
+  arrange(subjectid, cmspid) 
+
+adcm <- cat_imp %>% 
+  select(subjectid,  rantrt2) %>% 
+  left_join(tdcm, by = "subjectid") %>% 
+  mutate(cmtype = fct_na_value_to_level(cmtype),
+         l5name = factor(l5name),
+         l5name = fct_na_value_to_level(l5name))
+
+tmp <- adcm %>% 
+  group_by(subjectid, rantrt2, cmtype, l5name) %>% 
+  summarise(n = n()) %>% 
+  group_by(rantrt2, cmtype, l5name) %>% 
+  summarise(n=n()) %>% 
+  mutate(pct = case_when(
+    rantrt2 == "SOC ± HCQ" ~ round(n/76*100, digits = 1),
+    rantrt2 == "Remdesivir" ~ round(n/42*100, digits = 1)),
+    txt = paste0(n, " (", pct, "%)")) %>% 
+  select(-n, -pct) %>% 
+   pivot_wider(names_from = rantrt2, values_from = txt, values_fill = "0 (0.0%)") 
+
+
+```
+
+
+```{r}
+tmp %>% 
+  arrange(cmtype, l5name) %>% 
+  knitr::kable()
+```
+
+## Ref 2 Comment 3
+
+
+- recruitment occured from March to October 2020, a period during which, there has been a lot a change in the way patients were cared for in terms of oxygenotherapy, cointerventions etc.) Because the trial is small, it is not excluded that there may be imabalance in terms of periods of inclusion. Can you check the balance in terms of period of inclusion in the two arms ?
+
+Plot Kaplan-Meier plot of the inclusion
+
+The slight difference seen is due to the 1:1:1 between HCQ:Remdesivir:SoC the first 40 days after remdesivir was available. This lead to a 2:1 randomisation between the two groups in this period. Between  day 40 and the end the randomisation was 1:1 between Remdesivir and SoC. 
+```{r}
+
+
+
+library(ggsurvfit)
+tmp <- adprom_rem %>% 
+  select(rantrt2, rantrt, randt) %>% 
+  mutate(time = randt -min(randt),
+         status = 1) %>%
+  arrange(rantrt2, time) %>% 
+  group_by(rantrt2) %>% 
+  mutate(csum = cumsum(status)) 
+
+
+ggplot(data = tmp, mapping= aes(x = time, y = csum, color = rantrt2 )) +
+  geom_line() + 
+  labs(
+    x = "Days since first participant randomised",
+    y = "Inclusion rate",
+    color = "Group"
+  )
+
+survfit2(Surv(time, status) ~ rantrt2, data = tmp) %>% 
+  ggsurvfit(type = "risk") + 
+  add_pvalue() + 
+  labs(
+    x = "Days since first participant randomised",
+    y = "Inclusion rate"
+  )
+
+
+
+```
+
+## Ref 2 Comment 4
+Analysis is on full analysis set. I suggest to add Intent to treat. It is also mandatory to report the number of patients randomized without at least one post-randomisation observation to understand how different was the sample was.
+
+```{r}
+adsl_all %>% 
+  filter(randomised == "Yes") %>% 
+  group_by(ranavail_rem, fas, rantrt) %>% 
+  summarise(n=n())
+
+```
+So, 122 was randomised, and 4 were excluded from the full analysis set due to no post-randomisation observations.
+
+
+
+
+
+
+
 

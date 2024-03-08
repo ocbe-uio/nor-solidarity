@@ -59,15 +59,19 @@ subgroups <- addm %>%
   select(subjectid, rcwhostate, abseroc, abcapsidd, sympdur, 
          dmage, vllog10cpkc, lbcrpres, lbferres, lblymres) %>% 
   mutate(age_cat = if_else(dmage < 60, "age < 60 years", "age ≥ 60 years"),
+         age2_cat = if_else(dmage < 65, "age < 65 years", "age ≥ 65 years"),
          sympdur_cat = if_else(sympdur < 7, "Symptom duration < 7 days", "Symptom duration ≥ 7 days"),
          vl_median = median(vllog10cpkc, na.rm = TRUE),
          vl_cat = if_else(vllog10cpkc < median(vllog10cpkc, na.rm = TRUE), "Low viral load", "High viral load"),
          crp_median = median(lbcrpres, na.rm = TRUE),
          crp_cat = if_else(lbcrpres < median(lbcrpres, na.rm = TRUE),"Low CRP", "High CRP"),
          fer_median = median(lbferres, na.rm = TRUE),
-         fer_cat = if_else(lbferres < median(lbferres, na.rm = TRUE), "Low Ferritin", "High Ferritin")) %>% 
-  select(subjectid, rcwhostate, abseroc, abcapsidd, ends_with("_cat")) %>% 
-  mutate(across(ends_with("_cat"), factor)) 
+         fer_cat = if_else(lbferres < median(lbferres, na.rm = TRUE), "Low Ferritin", "High Ferritin"),
+         oxygen = case_match(rcwhostate, "Moderate" ~ "No or low flow ventilation", "Severe" ~ "Intensive ventilation or ECMO")) %>% 
+  select(subjectid, rcwhostate, abseroc, abcapsidd, oxygen, ends_with("_cat")) %>% 
+  mutate(across(ends_with("_cat"), factor)) %>% 
+  mutate(oxygen = factor(oxygen)) %>% 
+  set_variable_labels(oxygen = "Ventilation at baseline")
 
 
 adprom <- adsl %>% 
@@ -110,14 +114,16 @@ adprom <- adsl %>%
 
 
 
-adprom <- adprom %>% 
+adprom_noimp <- adprom %>% 
   left_join(cat, by = "subjectid") %>% 
   left_join(qol, by = "subjectid") %>% 
   mutate(in_cat = if_else(in_cat, TRUE, FALSE, missing = FALSE),
          in_qol = if_else(in_qol, TRUE, FALSE, missing = FALSE),
          in_prom = if_else(in_cat | in_qol, TRUE, FALSE)) %>% 
   mutate(rantrt2 = if_else(rantrtcd ==3, "Remdesivir", "SOC ± HCQ"),
-         rantrt2 = factor(rantrt2, levels = c("Remdesivir", "SOC ± HCQ"), ordered = FALSE)) %>% 
+         rantrt2 = factor(rantrt2, levels = c("Remdesivir", "SOC ± HCQ"), ordered = FALSE))
+
+adprom <- adprom_noimp %>% 
   mutate(across(starts_with("copd") & ends_with("_m1"), ~replace(., is.na(.) & survcens_28 == "No", 5))) %>% #impute worst case outcome for death
   mutate(across(starts_with("copd") & ends_with("_m3"), ~replace(., is.na(.) & survcens_60 == "No", 5))) %>% #impute worst case outcome for death
   mutate(across(starts_with("total_m1"), ~replace(., is.na(.) & survcens_28 == "No", 40))) %>% #impute worst case outcome for death
@@ -130,5 +136,7 @@ adprom <- adprom %>%
 
 
 readr::write_rds(adprom, "data/ad/adprom.rds")  
+readr::write_rds(adprom_noimp, "data/ad/adprom_noimp.rds") 
+
   
 
