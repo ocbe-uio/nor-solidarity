@@ -12,7 +12,7 @@ library(glue)
 library(readr)
 library(labelled)
 
-source("src/external/functions.R")
+source("src/External/functions.R")
 
 #######################
 # Set this parameter to false in the Makefile to run the true allocation results.
@@ -137,6 +137,56 @@ adprom <- adprom_noimp %>%
 
 readr::write_rds(adprom, "data/ad/adprom.rds")  
 readr::write_rds(adprom_noimp, "data/ad/adprom_noimp.rds") 
+
+
+adprom_anon <- adprom %>% 
+  filter(ranavail_rem == "Yes") %>% 
+  select(rantrt, rantrt2, starts_with("copd"), total_m1, total_m3, Eq5d6, starts_with("Score")) %>% 
+  mutate(random = runif(n())) %>% 
+  arrange(random) %>% 
+  mutate(randomid = row_number()) %>%
+  select(randomid, everything()) %>% 
+  select(-random)
+
+
+write_csv(adprom_anon, "data/ad/adprom_anon.csv", col_names = TRUE)
+
+adprom_legend <- tribble(
+  ~variable, ~label,
+  "rantrt", "Treatment allocation",
+  "rantrt2", "Treatment allocation SOC and HCQ combined",
+  "copd1_m1", "CAT Cough at month 1",
+  "copd1_m3", "Cat Cough at month 3",
+  "copd2_m1", "CAT Phlegm at month 1",
+  "copd2_m3", "CAT Phlegm at month 3",
+  "copd3_m1", "CAT Chest tightness at month 1",
+  "copd3_m3", "CAT Chest tightness at month 3",
+  "copd4_m1", "CAT Breathlessness at month 1",
+  "copd4_m3", "CAT Breathlessness at month 3",
+  "copd5_m1", "CAT Activity at month 1",
+  "copd5_m3", "CAT Activity at month 3",
+  "copd6_m1", "CAT Confidence at month 1",
+  "copd6_m3", "CAT Confidence at month 3",
+  "copd7_m1", "CAT Sleep at month 1",
+  "copd7_m3", "CAT Sleep at month 3",
+  "copd8_m1", "CAT Energy at month 1",
+  "copd8_m3", "CAT Energy at month 3",
+  "total_m1", "Total CAT score at month 1",
+  "total_m3", "Total CAT score at month 3",
+  "Eq5d6", "EQ-5D Self-rated health (VAS)",
+  "Score_EQ5D", "EQ-5D Index Value (UK TTO)",
+  "Score_Pf", "RAND SF-36 Physical Functioning",
+  "Score_Rp", "RAND SF-36 Role Physical",
+  "Score_Re", "RAND SF-36 Role Emotional",
+  "Score_Vt", "RAND SF-36 Vitality",
+  "Score_Mh", "RAND SF-36 Mental Health",
+  "Score_Sf", "RAND SF-36 Social Functioning",
+  "Score_Bp", "RAND SF-36 Bodily Pain",
+  "Score_Gh", "RAND SF-36 General Health",
+  "Score_Ht", "RAND SF-36 Health Transition",
+)
+
+write_csv(adprom_legend, "data/ad/adprom_legend.csv", col_names = TRUE)
 
   
 
